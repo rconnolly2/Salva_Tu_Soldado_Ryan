@@ -17,6 +17,11 @@ class Juego:
         self.cantidad_zoom = 1
         self.zoom_cambiado = False
 
+        # Menu local jugando:
+        self.imagen_mapa = pygame.image.load("mapa.png")
+        self.pos_imagen_mapa = (10, 500)
+        self.dimensiones_imagen_mapa = (self.imagen_mapa.get_width(), self.imagen_mapa.get_height())
+
         # Tamaño real de mapa:
         self.mapa_ancho = 6400
         self.mapa_alto = 6400
@@ -54,13 +59,18 @@ class Juego:
                      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
                      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
 
+        # Mis listas de decoracion ("esto lo tendra que cargar el server"):
         self.lista_arboles = []
         for i in range(200):
-            self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto)])
+            self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
+        self.lista_yacimiento_petroleo = []
+        for i in range(50):
+            self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
 
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
         self.arbol1 = pygame.image.load("arbol1.png")
+        self.yacimiento_petroleo = pygame.image.load("yacimiento_petroleo.png")
 
         self.screen = pygame.display.set_mode((self.ancho_ventana, self.altura_ventana))
         pygame.display.set_caption("Salva a tu soldado Ryan")
@@ -143,36 +153,62 @@ class Juego:
             # Sumamos verticalmente tamaño del tile:
             y = y + self.tamaño_tile*self.cantidad_zoom
 
-    def CargarDecoracion(self, surface_pintar, lista_arboles, imagen_arbol, posjugador_y):
-        arbol1_escalado = pygame.transform.scale(imagen_arbol, (imagen_arbol.get_width() * self.cantidad_zoom, imagen_arbol.get_height() * self.cantidad_zoom))
+    def CargarDecoracion(self, surface_pintar, lista_de_listas_de_objeto, lista_de_imagen, posjugador_y):
+        '''
+        Importante! poner imagenes de a lista: lista_de_imagen en el orden correcto de elif de esta funcion
+        '''
+        # Vamos a crear una lista de imagenes escaladas de la lista de imagenes de nuestro parametro: lista_listas_de_imagen
+        lista_imagenes_escaladas = []
+        for imagen in range(len(lista_de_imagen)):
+            lista_imagenes_escaladas.append(pygame.transform.scale(lista_de_imagen[imagen], (lista_de_imagen[imagen].get_width() * self.cantidad_zoom, lista_de_imagen[imagen].get_height() * self.cantidad_zoom)))
+        #imagen_objeto_escalado = pygame.transform.scale(imagen_objeto, (imagen_objeto.get_width() * self.cantidad_zoom, imagen_objeto.get_height() * self.cantidad_zoom))
         frame_actual = pygame.time.get_ticks()//150 #Modificar el 150 que es la duracion de cada frame para hacerlo mas lento
 
-        lista_arboles_jugador = lista_arboles.copy() # Copia local de la lista arboles
+        #Creamos una lista con su contenido unido a una nueva lista:
+        lista_objeto_jugador = []
+        for lista in range(len(lista_de_listas_de_objeto)):
+            lista_objeto_jugador = lista_de_listas_de_objeto[lista].copy() + lista_objeto_jugador
 
 
-        
-        lista_arboles_jugador.append([jugador.posjugador_x, jugador.posjugador_y, "jugador"]) # Añadimos pos del jugador a la lista
-        lista_arboles_jugador = sorted(lista_arboles_jugador, key=lambda x: x[1]) # Ordenamos por "y"
-        print(self.cantidad_zoom)
 
-        #jugador.ImprimirJugador(surface_pintar, juego.angulo, None,  frame_actual)
-        for i in range(len(lista_arboles_jugador)):
-            x = lista_arboles_jugador[i][0]
-            y = lista_arboles_jugador[i][1]
+        #Ahora metemos jugador en nuestra nueva lista
+        lista_objeto_jugador.append([jugador.posjugador_x, jugador.posjugador_y, "jugador"]) # Añadimos pos del jugador a la lista
+        lista_objeto_jugador = sorted(lista_objeto_jugador, key=lambda x: x[1]) # Ordenamos por "y"
+
+        for i in range(len(lista_objeto_jugador)):
+            x = lista_objeto_jugador[i][0]
+            y = lista_objeto_jugador[i][1]
             x = (x+self.camera_x)*self.cantidad_zoom
             y = (y+self.camera_y)*self.cantidad_zoom
 
             
-            # En caso de que el arbol este delante del jugador osea "y" dibujamos:
-            if lista_arboles_jugador[i][-1] == "jugador":
-                print("imprimiendo jugador")
+            # En caso de que el objeto este delante del jugador osea "y" dibujamos:
+            if lista_objeto_jugador[i][-1] == "jugador":
                 jugador.ImprimirJugador(self.screen, juego.angulo, None,  frame_actual)
                 
-            else:
-                surface_pintar.blit(arbol1_escalado, (x, y-(arbol1_escalado.get_width()/2))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
+            elif lista_objeto_jugador[i][-1] == "arbol":
+                surface_pintar.blit(lista_imagenes_escaladas[0], (x, y-(lista_imagenes_escaladas[0].get_height()/1.5))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
                 pygame.draw.circle(surface_pintar, (255, 255, 0), (x, y), 5)
+            elif lista_objeto_jugador[i][-1] == "petroleo":
+                surface_pintar.blit(lista_imagenes_escaladas[1], (x, y-(lista_imagenes_escaladas[1].get_height()/1.5))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
 
-                
+    def EncontrarPuntoMinimapa(self, pos_jugador_x, pos_jugador_y, ancho_minimapa, alto_minimapa, anchura_mapa, altura_mapa):
+        '''
+        Esta funcion pequeña coge la posicion del jugador y la anchura y altura del minimapa y el mapa
+        real y devuele la posicion que estaria en el minimapa
+        '''
+        minimapa_x = pos_jugador_x / anchura_mapa * ancho_minimapa
+        minimapa_y = pos_jugador_y / altura_mapa * alto_minimapa
+        return minimapa_x, minimapa_y
+
+    def CargarMenu(self):
+
+        # Primero cargo mapa:
+        self.screen.blit(self.imagen_mapa, self.pos_imagen_mapa)
+
+        #Donde esta el jugador:
+        posminimapa_x, posminimapa_y = self.EncontrarPuntoMinimapa(jugador.posjugador_x, jugador.posjugador_y, 122, 96, self.mapa_ancho, self.mapa_alto)
+        pygame.draw.circle(self.screen, (255, 0, 255), (self.pos_imagen_mapa[0]+posminimapa_x, self.pos_imagen_mapa[1]+posminimapa_y), 5)
 
 
         
@@ -243,7 +279,7 @@ class Juego:
                     jugador.posjugador_pantalla_y = jugador.posjugador_pantalla_y - (self.camera_speed/2) * self.cantidad_zoom
 
             #Actualizar pantalla local con teclas de flecha:
-            jugador.posjugador_x = jugador.posjugador_pantalla_x
+
             if keys[pygame.K_RIGHT]:
                 self.camera_x = round((self.camera_x - self.camera_speed * self.cantidad_zoom), 2)
                 jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x - self.camera_speed * self.cantidad_zoom
@@ -269,7 +305,14 @@ class Juego:
             
 
             self.Cargar_Mapa(self.mapa, self.screen, self.camera_x, self.camera_y) # Cargamos mapa
-            self.CargarDecoracion(self.screen, self.lista_arboles, self.arbol1, jugador.posjugador_pantalla_y)
+            
+            lista_imagenes = [self.arbol1, self.yacimiento_petroleo]
+            lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo]
+            # Cargamos yacimientos:
+            self.CargarDecoracion(self.screen, lista_lista_objetos, lista_imagenes, jugador.posjugador_pantalla_y)
+
+            #Cargo Menu local:
+            self.CargarMenu()
 
             pygame.draw.circle(self.screen, (255, 255, 0), (self.camera_x, self.camera_y), 30)
             datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
