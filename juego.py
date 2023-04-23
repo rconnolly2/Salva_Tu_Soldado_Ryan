@@ -22,6 +22,17 @@ class Juego:
         self.pos_imagen_mapa = (10, 500)
         self.dimensiones_imagen_mapa = (self.imagen_mapa.get_width(), self.imagen_mapa.get_height())
 
+        #Barra inferior
+        self.imagen_barra = pygame.image.load("barra_editar.png")
+        self.pos_imagen_barra = (172, 505)
+        self.dimensiones_imagen_barra = (self.imagen_barra.get_width(), self.imagen_barra.get_height())
+        self.tecla_1_pulsado = False
+
+        #Marcador
+        self.imagen_marcador = pygame.image.load("marcador.png")
+        self.pos_imagen_marcador = (667, 11)
+        self.dimensiones_imagen_marcador = (self.imagen_marcador.get_width(), self.imagen_marcador.get_height())
+
         # Tamaño real de mapa:
         self.mapa_ancho = 6400
         self.mapa_alto = 6400
@@ -64,13 +75,15 @@ class Juego:
         for i in range(200):
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
         self.lista_yacimiento_petroleo = []
-        for i in range(50):
+        for i in range(10):
             self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
 
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
         self.arbol1 = pygame.image.load("arbol1.png")
         self.yacimiento_petroleo = pygame.image.load("yacimiento_petroleo.png")
+        self.yacimiento_petroleo_arreglado = pygame.image.load("yacimiento_petroleo_arreglado.png")
+        self.yacimiento_petroleo_arreglado_colocando = pygame.image.load("yacimiento_petroleo_arreglado_colocando.png")
 
         self.screen = pygame.display.set_mode((self.ancho_ventana, self.altura_ventana))
         pygame.display.set_caption("Salva a tu soldado Ryan")
@@ -107,7 +120,8 @@ class Juego:
             return math.degrees(angulo)
         
     def Colision2DCajas(self, x1, y1, w1, h1, x2, y2, w2, h2):
-        if x1 < x2 + w2 and x1 + w1 > x2 and y1 < y2 + h2 and y1 + h1 > y2:
+        if (x1 < x2 + w2 and x1 + w1 > x2 and
+            y1 < y2 + h2 and y1 + h1 > y2):
             return True
         else:
             return False
@@ -206,10 +220,69 @@ class Juego:
         # Primero cargo mapa:
         self.screen.blit(self.imagen_mapa, self.pos_imagen_mapa)
 
-        #Donde esta el jugador:
+        # Donde esta el jugador:
         posminimapa_x, posminimapa_y = self.EncontrarPuntoMinimapa(jugador.posjugador_x, jugador.posjugador_y, 122, 96, self.mapa_ancho, self.mapa_alto)
         pygame.draw.circle(self.screen, (255, 0, 255), (self.pos_imagen_mapa[0]+posminimapa_x, self.pos_imagen_mapa[1]+posminimapa_y), 5)
 
+        # Ahora la barra inferior:
+        self.screen.blit(self.imagen_barra, self.pos_imagen_barra)
+
+        # Marcador:
+        self.screen.blit(self.imagen_marcador, self.pos_imagen_marcador)
+
+    def ColocarYacimiento(self, raton_x, raton_y, lista_yacimientos):
+        raton_x, raton_y = tuple(pygame.mouse.get_pos())
+        x_mouse = (raton_x+self.camera_x)*self.cantidad_zoom
+        y_mouse = (raton_y+self.camera_y)*self.cantidad_zoom
+
+
+        '''porque ESTO FUNCIONA Y LO DE ABAJO NO  print(x_mouse, y_mouse)
+        print((jugador.posjugador_pantalla_x+self.camera_x)*self.cantidad_zoom, (jugador.posjugador_pantalla_y+self.camera_y)*self.cantidad_zoom)'''
+
+        print(x_mouse, y_mouse)
+
+
+        rect_jugador = pygame.Rect(raton_x, raton_y, 100, 100)
+        pygame.draw.rect(self.screen, (255, 0, 255), rect_jugador)
+
+        for yacimiento in range(len(lista_yacimientos)):
+            x_yacimiento = (lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom
+            y_yacimiento = (lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom
+            rect_torre = pygame.Rect(x_yacimiento, y_yacimiento, 100, 200)
+            pygame.draw.rect(self.screen, (255, 0, 255), rect_torre)
+
+            print(((lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom), ((lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom))
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_1]:
+            self.tecla_1_pulsado = True
+
+        if self.tecla_1_pulsado == True: #Boton se a apretado "pero no mantenido"
+
+            self.screen.blit(self.yacimiento_petroleo_arreglado_colocando, (raton_x, raton_y))
+
+
+
+
+            # Obtenemos el estado de todas las teclas
+            keys = pygame.key.get_pressed()
+
+            if keys[pygame.K_2]:
+                x_mouse = (raton_x+self.camera_x)*self.cantidad_zoom
+                y_mouse = (raton_y+self.camera_y)*self.cantidad_zoom
+                
+                #Miramos si hay colision con el raton y el yacimiento:
+                for yacimiento in range(len(lista_yacimientos)):
+                    x_yacimiento = (lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom
+                    y_yacimiento = (lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom
+                    
+
+                    ancho, alto = 100, 200
+                    #print("mouse: " + str(x_mouse) + " " + str(y_mouse) + " yacimiento: " + str(x_yacimiento) + " " + str(y_yacimiento))
+                    if self.Colision2DCajas(x_mouse, y_mouse, 100, 100, x_yacimiento, y_yacimiento, ancho, alto) == True:
+                        
+                        print("colision!")
+                        break
 
         
         
@@ -310,14 +383,19 @@ class Juego:
             lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo]
             # Cargamos yacimientos:
             self.CargarDecoracion(self.screen, lista_lista_objetos, lista_imagenes, jugador.posjugador_pantalla_y)
+            
+            datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
+            # Pongo el nuevo angulo:
+            self.angulo = datos_mouse[3]
+
+            #Barra inferior
+            self.ColocarYacimiento(datos_mouse[0], datos_mouse[1], self.lista_yacimiento_petroleo)
 
             #Cargo Menu local:
             self.CargarMenu()
 
             pygame.draw.circle(self.screen, (255, 255, 0), (self.camera_x, self.camera_y), 30)
-            datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
-            # Pongo el nuevo angulo:
-            self.angulo = datos_mouse[3]
+        
 
         
             
