@@ -1,5 +1,7 @@
 import pygame
 import math
+import sys
+from random import randint
 
 class Juego:
     def __init__(self):
@@ -8,6 +10,8 @@ class Juego:
         # Set up window dimensions
         self.altura_ventana = 600
         self.ancho_ventana = 800
+
+        self.tecla_pulsada = False
 
         # Cantidad de zoom
         self.cantidad_zoom = 1
@@ -50,8 +54,13 @@ class Juego:
                      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
                      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
 
+        self.lista_arboles = []
+        for i in range(200):
+            self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto)])
+
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
+        self.arbol1 = pygame.image.load("arbol1.png")
 
         self.screen = pygame.display.set_mode((self.ancho_ventana, self.altura_ventana))
         pygame.display.set_caption("Salva a tu soldado Ryan")
@@ -134,6 +143,48 @@ class Juego:
             # Sumamos verticalmente tamaño del tile:
             y = y + self.tamaño_tile*self.cantidad_zoom
 
+    def CargarDecoracion(self, surface_pintar, lista_arboles, imagen_arbol, posjugador_y):
+        arbol1_escalado = pygame.transform.scale(imagen_arbol, (imagen_arbol.get_width() * self.cantidad_zoom, imagen_arbol.get_height() * self.cantidad_zoom))
+        frame_actual = pygame.time.get_ticks()//150 #Modificar el 150 que es la duracion de cada frame para hacerlo mas lento
+
+        lista_arboles_jugador = lista_arboles.copy() # Copia local de la lista arboles
+
+
+        
+        lista_arboles_jugador.append([jugador.posjugador_x, jugador.posjugador_y, "jugador"]) # Añadimos pos del jugador a la lista
+        lista_arboles_jugador = sorted(lista_arboles_jugador, key=lambda x: x[1]) # Ordenamos por "y"
+        print(self.cantidad_zoom)
+
+        #jugador.ImprimirJugador(surface_pintar, juego.angulo, None,  frame_actual)
+        for i in range(len(lista_arboles_jugador)):
+            x = lista_arboles_jugador[i][0]
+            y = lista_arboles_jugador[i][1]
+            x = (x+self.camera_x)*self.cantidad_zoom
+            y = (y+self.camera_y)*self.cantidad_zoom
+
+            
+            # En caso de que el arbol este delante del jugador osea "y" dibujamos:
+            if lista_arboles_jugador[i][-1] == "jugador":
+                print("imprimiendo jugador")
+                jugador.ImprimirJugador(self.screen, juego.angulo, None,  frame_actual)
+                
+            else:
+                surface_pintar.blit(arbol1_escalado, (x, y-(arbol1_escalado.get_width()/2))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
+                pygame.draw.circle(surface_pintar, (255, 255, 0), (x, y), 5)
+
+                
+
+
+        
+        
+        
+    
+                
+                
+            
+
+
+
         
     def run(self):
         running = True
@@ -156,6 +207,7 @@ class Juego:
 
             # Movimiento normal del jugador con teclas: w a s d
             if keys[pygame.K_a]:
+                self.tecla_pulsada = True
                 jugador.posjugador_x = jugador.posjugador_x - 4
                 jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x  - 4
 
@@ -164,6 +216,7 @@ class Juego:
                     jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x + (self.camera_speed/2) * self.cantidad_zoom
 
             if keys[pygame.K_d]:
+                self.tecla_pulsada = True
                 jugador.posjugador_x = jugador.posjugador_x + 4
                 jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x  + 4
 
@@ -172,6 +225,7 @@ class Juego:
                     jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x - (self.camera_speed/2) * self.cantidad_zoom
 
             if keys[pygame.K_w]:
+                self.tecla_pulsada = True
                 jugador.posjugador_y = jugador.posjugador_y - 4
                 jugador.posjugador_pantalla_y = jugador.posjugador_pantalla_y  - 4
 
@@ -180,6 +234,7 @@ class Juego:
                     jugador.posjugador_pantalla_y = jugador.posjugador_pantalla_y + (self.camera_speed/2) * self.cantidad_zoom
 
             if keys[pygame.K_s]:
+                self.tecla_pulsada = True
                 jugador.posjugador_y = jugador.posjugador_y + 4
                 jugador.posjugador_pantalla_y = jugador.posjugador_pantalla_y  + 4
 
@@ -187,7 +242,7 @@ class Juego:
                     self.camera_y = round((self.camera_y - (self.camera_speed/2) * self.cantidad_zoom), 2)
                     jugador.posjugador_pantalla_y = jugador.posjugador_pantalla_y - (self.camera_speed/2) * self.cantidad_zoom
 
-            #Actualizar pantalla local:
+            #Actualizar pantalla local con teclas de flecha:
             jugador.posjugador_x = jugador.posjugador_pantalla_x
             if keys[pygame.K_RIGHT]:
                 self.camera_x = round((self.camera_x - self.camera_speed * self.cantidad_zoom), 2)
@@ -214,11 +269,15 @@ class Juego:
             
 
             self.Cargar_Mapa(self.mapa, self.screen, self.camera_x, self.camera_y) # Cargamos mapa
+            self.CargarDecoracion(self.screen, self.lista_arboles, self.arbol1, jugador.posjugador_pantalla_y)
+
             pygame.draw.circle(self.screen, (255, 255, 0), (self.camera_x, self.camera_y), 30)
             datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
             # Pongo el nuevo angulo:
             self.angulo = datos_mouse[3]
-            jugador.ImprimirJugador(juego.screen, juego.angulo, None, False)
+
+        
+            
             pygame.display.flip() # Actualizamos la pantalla
 
     def PosicionMouse(self, posicion_jugador_x, posicion_jugador_y):
@@ -264,23 +323,52 @@ class Jugador:
         if zoom_cambiado == True:
             self.atrasus_ecalado = pygame.transform.scale(self.atrasus, (self.atrasus.get_width() * juego.cantidad_zoom, self.atrasus.get_width() * juego.cantidad_zoom))
             self.fronteus_ecalado = pygame.transform.scale(self.fronteus, (self.fronteus.get_width() * juego.cantidad_zoom, self.fronteus.get_width() * juego.cantidad_zoom))
+            self.fronteuscaminando1_esclado = pygame.transform.scale(self.fronteuscaminando1, (self.fronteuscaminando1.get_width() * juego.cantidad_zoom, self.fronteuscaminando1.get_width() * juego.cantidad_zoom))
+            self.fronteuscaminando2_esclado = pygame.transform.scale(self.fronteuscaminando2, (self.fronteuscaminando2.get_width() * juego.cantidad_zoom, self.fronteuscaminando2.get_width() * juego.cantidad_zoom))
+            self.atrasuscaminando1_esclado = pygame.transform.scale(self.atrasuscaminando1, (self.atrasuscaminando1.get_width() * juego.cantidad_zoom, self.atrasuscaminando1.get_width() * juego.cantidad_zoom))
+            self.atrasuscaminando2_esclado = pygame.transform.scale(self.atrasuscaminando2, (self.atrasuscaminando2.get_width() * juego.cantidad_zoom, self.atrasuscaminando2.get_width() * juego.cantidad_zoom))
 
             zoom_cambiado = False
 
 
-    def ImprimirJugador(self, pantalla, angulo_objectivo, direccion: str, tecla_pulsada: bool):
+    def ImprimirJugador(self, pantalla, angulo_objectivo, direccion: str, frame_actual):
         
 
         x = self.posjugador_pantalla_x *juego.cantidad_zoom
         y = self.posjugador_pantalla_y *juego.cantidad_zoom
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_w] or keys[pygame.K_a] or keys[pygame.K_d] or keys[pygame.K_s]:
+            tecla_pulsada = True
+        else:
+            tecla_pulsada = False
 
 
         #Primero imprimimos si esta quieto
         if angulo_objectivo > 0 and angulo_objectivo < 180:
-            pantalla.blit(self.atrasus_ecalado, (x, y))
+            if tecla_pulsada == False:
+                pantalla.blit(self.atrasus_ecalado, (x, y))
+            else:
+                if frame_actual % 2 == 0:
+                    imagen_actual = self.atrasuscaminando1_esclado
+                else:
+                    imagen_actual = self.atrasuscaminando2_esclado
+                tecla_pulsada = False
+                pantalla.blit(imagen_actual, (x, y))
+                
 
         if angulo_objectivo < -1 and angulo_objectivo > -180:
-            pantalla.blit(self.fronteus_ecalado, (x, y))
+
+            if tecla_pulsada == False:
+                pantalla.blit(self.fronteus_ecalado, (x, y))
+            else:
+                if frame_actual % 2 == 0:
+                    imagen_actual = self.fronteuscaminando1_esclado
+                else:
+                    imagen_actual = self.fronteuscaminando2_esclado
+                
+                pantalla.blit(imagen_actual, (x, y))
+                tecla_pulsada = False
 
         
 
