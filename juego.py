@@ -75,8 +75,10 @@ class Juego:
         for i in range(200):
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
         self.lista_yacimiento_petroleo = []
+        self.lista_yacimiento_petroleo.append((30, 30))
+
         for i in range(10):
-            self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
+            self.lista_yacimiento_petroleo.append((randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"))
 
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
@@ -236,10 +238,11 @@ class Juego:
         y_mouse = (raton_y+self.camera_y)*self.cantidad_zoom
 
 
-        '''porque ESTO FUNCIONA Y LO DE ABAJO NO  print(x_mouse, y_mouse)
-        print((jugador.posjugador_pantalla_x+self.camera_x)*self.cantidad_zoom, (jugador.posjugador_pantalla_y+self.camera_y)*self.cantidad_zoom)'''
+        print(raton_x, raton_y) # EL PROBLEMA ES QUE pygame.mouse.get_pos() solo captura el raton dentro de la pantalla de x=0 and 800
+        # Una posible solucion seria crear un variable del raton que se le va añadiendo si la pantalla se mueve con las teclas similar a posjugador_pantalla_x
+        #test petroleo print((self.lista_yacimiento_petroleo[0][0]+self.camera_x)*self.cantidad_zoom, (self.lista_yacimiento_petroleo[0][1]+self.camera_y)*self.cantidad_zoom)
+        
 
-        print(x_mouse, y_mouse)
 
 
         rect_jugador = pygame.Rect(raton_x, raton_y, 100, 100)
@@ -250,8 +253,9 @@ class Juego:
             y_yacimiento = (lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom
             rect_torre = pygame.Rect(x_yacimiento, y_yacimiento, 100, 200)
             pygame.draw.rect(self.screen, (255, 0, 255), rect_torre)
-
-            print(((lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom), ((lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom))
+            
+            
+            #print(((lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom), ((lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom))
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_1]:
