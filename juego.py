@@ -74,10 +74,9 @@ class Juego:
         self.lista_arboles = []
         for i in range(200):
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
-        self.lista_yacimiento_petroleo = []
-        self.lista_yacimiento_petroleo.append((30, 30))
 
-        for i in range(10):
+        self.lista_yacimiento_petroleo = []
+        for i in range(30):
             self.lista_yacimiento_petroleo.append((randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"))
 
         # Cargo imagenes:
@@ -86,13 +85,18 @@ class Juego:
         self.yacimiento_petroleo = pygame.image.load("yacimiento_petroleo.png")
         self.yacimiento_petroleo_arreglado = pygame.image.load("yacimiento_petroleo_arreglado.png")
         self.yacimiento_petroleo_arreglado_colocando = pygame.image.load("yacimiento_petroleo_arreglado_colocando.png")
+        self.imagen_barra_vida = pygame.image.load("barravida.png")
+        self.imagen_yacimiento_jugador = pygame.image.load("yacimiento_petroleo_arreglado.png")
 
         self.screen = pygame.display.set_mode((self.ancho_ventana, self.altura_ventana))
         pygame.display.set_caption("Salva a tu soldado Ryan")
 
+        #Cargo Fuente:
+        self.ruta_fuente = "MinimalPixelFont.ttf"
+
         # Configuramos la posición inicial de la cámara
-        self.camera_x = 0
-        self.camera_y = 0
+        self.camera_x = -200
+        self.camera_y = -200
 
         # Configuramos la velocidad de la cámara
         self.camera_speed = 4
@@ -232,62 +236,125 @@ class Juego:
         # Marcador:
         self.screen.blit(self.imagen_marcador, self.pos_imagen_marcador)
 
-    def ColocarYacimiento(self, raton_x, raton_y, lista_yacimientos):
-        raton_x, raton_y = tuple(pygame.mouse.get_pos())
-        x_mouse = (raton_x+self.camera_x)*self.cantidad_zoom
-        y_mouse = (raton_y+self.camera_y)*self.cantidad_zoom
+    def ColocarYacimiento(self, lista_yacimientos, lista_yacimiento_jugador, usuario_jugador):
 
-
-        print(raton_x, raton_y) # EL PROBLEMA ES QUE pygame.mouse.get_pos() solo captura el raton dentro de la pantalla de x=0 and 800
-        # Una posible solucion seria crear un variable del raton que se le va añadiendo si la pantalla se mueve con las teclas similar a posjugador_pantalla_x
-        #test petroleo print((self.lista_yacimiento_petroleo[0][0]+self.camera_x)*self.cantidad_zoom, (self.lista_yacimiento_petroleo[0][1]+self.camera_y)*self.cantidad_zoom)
-        
-
-
-
-        rect_jugador = pygame.Rect(raton_x, raton_y, 100, 100)
-        pygame.draw.rect(self.screen, (255, 0, 255), rect_jugador)
-
-        for yacimiento in range(len(lista_yacimientos)):
-            x_yacimiento = (lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom
-            y_yacimiento = (lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom
-            rect_torre = pygame.Rect(x_yacimiento, y_yacimiento, 100, 200)
-            pygame.draw.rect(self.screen, (255, 0, 255), rect_torre)
-            
-            
-            #print(((lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom), ((lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom))
 
         keys = pygame.key.get_pressed()
+
         if keys[pygame.K_1]:
+            
             self.tecla_1_pulsado = True
 
         if self.tecla_1_pulsado == True: #Boton se a apretado "pero no mantenido"
-
+            raton_x, raton_y = tuple(pygame.mouse.get_pos())
+            raton_x = int(raton_x-(50*self.cantidad_zoom)) #Le resto la mitad del cuadro 100px porque queremos el cuadrado del raton en el centro y no en la esquina de arriba
+            raton_y = int(raton_y-(50*self.cantidad_zoom))
+            ancho, alto = 100*self.cantidad_zoom, 200*self.cantidad_zoom
+            
             self.screen.blit(self.yacimiento_petroleo_arreglado_colocando, (raton_x, raton_y))
 
+            # Obtenemos el estado del click izq raton:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    #Raton a hecho click
+
+                    raton_x, raton_y = tuple(pygame.mouse.get_pos())
+                    raton_x = int(raton_x-(50*self.cantidad_zoom)) #Le resto la mitad del cuadro 100px porque queremos el cuadrado del raton en el centro y no en la esquina de arriba
+                    raton_y = int(raton_y-(50*self.cantidad_zoom))
+
+                    if self.camera_x < 0:
+                        #Camara va a la derecha # Piensa que el mapa empieza en posicion negativo porque en pygame empieza en 0,0
+                        x_mouse = int(((raton_x*-1)+((self.camera_x)*2))*self.cantidad_zoom) # lo convierte en negativo 
+                    else:
+                        #Camara va a la izquierda
+                        x_mouse = int(((raton_x)-(self.camera_x))*self.cantidad_zoom)  # lo convierte en positivo
+
+                    if self.camera_y < 0:
+                        #Camara va abajo
+                        y_mouse = int(((raton_y*-1)+((self.camera_y)*2))*self.cantidad_zoom)  # lo convierte en negativo
+                    else:
+                        #Camara va arriba:
+                        y_mouse = int(((raton_y)-(self.camera_y))*self.cantidad_zoom)  # lo convierte en positivo
 
 
+                    for yacimiento in range(len(lista_yacimientos)):
+                        print(lista_yacimientos[yacimiento])
+                        x_yacimiento = int((lista_yacimientos[yacimiento][0]-self.camera_x)*self.cantidad_zoom)
+                        y_yacimiento = int((lista_yacimientos[yacimiento][1]-self.camera_y)*self.cantidad_zoom)
+                        x_yacimiento = x_yacimiento *-1
+                        y_yacimiento = y_yacimiento *-1
 
-            # Obtenemos el estado de todas las teclas
-            keys = pygame.key.get_pressed()
+                        #print("mouse: " + str(x_mouse) + " " + str(y_mouse) + " yacimiento: " + str(x_yacimiento) + " " + str(y_yacimiento))
+                        if self.Colision2DCajas(x_mouse, y_mouse, 100*self.cantidad_zoom, 100*self.cantidad_zoom, x_yacimiento, y_yacimiento, ancho, alto) == True:
+                            
+                            #Cogemos el yacimiento de la lista publica y eliminamos el yacimiento y lo metemos a la lista del jugador con la misma posicion
+                            #En esta lista del jugador el formato es: [x, y, "nombre_del_jugador", vida_objeto, "tipo_objeto"]
 
-            if keys[pygame.K_2]:
-                x_mouse = (raton_x+self.camera_x)*self.cantidad_zoom
-                y_mouse = (raton_y+self.camera_y)*self.cantidad_zoom
+                            x_yacimiento, y_yacimiento =  lista_yacimientos[yacimiento][0], lista_yacimientos[yacimiento][1]
+
+                            del lista_yacimientos[yacimiento]
+                            lista_yacimiento_jugador.append([jugador.posjugador_x, jugador.posjugador_y, usuario_jugador, 5, "yacimiento"])
+                            print("elemento añadido a lista del jugadoor: " + usuario_jugador)
+                            self.tecla_1_pulsado = False
+                            break
+
                 
-                #Miramos si hay colision con el raton y el yacimiento:
-                for yacimiento in range(len(lista_yacimientos)):
-                    x_yacimiento = (lista_yacimientos[yacimiento][0]+self.camera_x)*self.cantidad_zoom
-                    y_yacimiento = (lista_yacimientos[yacimiento][1]+self.camera_y)*self.cantidad_zoom
+
+    def Crear_Surface_Fuente_Imprimir(self, tamaño_fuente, texto, color, posicion):
+        fuente = pygame.font.Font(self.ruta_fuente, tamaño_fuente)
+        x, y = posicion
+        y = y-(y/2)
+        # Crear una superficie de texto usando la fuente
+        superficie_texto = fuente.render(texto, True, (255, 255, 255))
+        # Obteniendo el rectángulo para la superficie de texto
+        rectangulo_texto = superficie_texto.get_rect()
+        #Posicion:
+        rectangulo_texto.topleft = posicion
+        self.screen.blit(superficie_texto, rectangulo_texto)
+
+    def BarraVida(self, valor_vida, posicion):
+        '''
+        Esta funcion solo crea una barra de vida que va cambiando segun el valor vida cambie
+        '''
+        #Primero imagen
+        self.screen.blit(self.imagen_barra_vida, posicion)
+        rect_imagen_copia = pygame.Rect((posicion[0]-posicion[0]/2), posicion[1], self.imagen_barra_vida.get_width()/1.5, self.imagen_barra_vida.get_height()/2)
+        if valor_vida == 5:
+            pygame.draw.rect(self.screen, (145, 14, 14), rect_imagen_copia)
+
+
+    
+    def CargarObjetosJugadores(self, lista_objeto_usuario, surface_imagen):
+        '''
+        Esta funcion va a imprimir por pantalla los objetos de los jugadores como yacimientos, tiendas etc ...
+
+        lista_objeto_usuario=> El tipo de objeto
+
+        '''
+        imagen_escalada_yacimiento = pygame.transform.scale(self.imagen_yacimiento_jugador, (self.imagen_yacimiento_jugador.get_width() * self.cantidad_zoom, self.imagen_yacimiento_jugador.get_height() * self.cantidad_zoom))
+        for lista in range(len(lista_objeto_usuario)):
+            x, y = lista_objeto_usuario[lista][0], lista_objeto_usuario[lista][0]
+            #De posicion real a pos => camara
+            x = (x+self.camera_x)*self.cantidad_zoom
+            y = (y+self.camera_y)*self.cantidad_zoom
+
+            usuario_jugador = lista_objeto_usuario[lista][2]
+            vida_objeto = lista_objeto_usuario[lista][3]
+
+            #Imprimo imagen
+            self.screen.blit(imagen_escalada_yacimiento, (x, y))
+            self.Crear_Surface_Fuente_Imprimir(70, usuario_jugador, (209, 115, 255), (x, y))
+
+            #Ahora barra vida:
+            self.BarraVida(vida_objeto, (x, y))
+
+
+
+
+
                     
-
-                    ancho, alto = 100, 200
-                    #print("mouse: " + str(x_mouse) + " " + str(y_mouse) + " yacimiento: " + str(x_yacimiento) + " " + str(y_yacimiento))
-                    if self.Colision2DCajas(x_mouse, y_mouse, 100, 100, x_yacimiento, y_yacimiento, ancho, alto) == True:
-                        
-                        print("colision!")
-                        break
-
+            
+                
         
         
         
@@ -385,15 +452,19 @@ class Juego:
             
             lista_imagenes = [self.arbol1, self.yacimiento_petroleo]
             lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo]
+
             # Cargamos yacimientos:
             self.CargarDecoracion(self.screen, lista_lista_objetos, lista_imagenes, jugador.posjugador_pantalla_y)
+
+            #Cargamos objetos de jugador:
+            self.CargarObjetosJugadores(jugador.lista_yacimiento_petroleo_jugador, self.imagen_yacimiento_jugador)
             
             datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
             # Pongo el nuevo angulo:
             self.angulo = datos_mouse[3]
 
             #Barra inferior
-            self.ColocarYacimiento(datos_mouse[0], datos_mouse[1], self.lista_yacimiento_petroleo)
+            self.ColocarYacimiento(self.lista_yacimiento_petroleo, jugador.lista_yacimiento_petroleo_jugador, "Robert Connolly")
 
             #Cargo Menu local:
             self.CargarMenu()
@@ -414,10 +485,10 @@ class Juego:
 class Jugador:
     def __init__(self):
         # Constructor:
-        #Esta posicion no es real "no se puede utulizar en red" se le añade la camara local (que se mueve)
+        # Esta posicion no es real "no se puede utulizar en red" se le añade la camara local (que se mueve)
         self.posjugador_pantalla_x = 0
         self.posjugador_pantalla_y = 0
-        #Posicion real sin camara añadida
+        # Posicion real sin camara añadida
         self.posjugador_y = 0
         self.posjugador_x = 0
         self.angulo_jugador = 0
@@ -433,13 +504,16 @@ class Jugador:
         self.atrasuscaminando1 = pygame.image.load("atrasuscaminando1.png")
         self.atrasuscaminando2 = pygame.image.load("atrasuscaminando2.png")
 
-        #Imagenes Escaladas que son escaldas solo cuando se hace zoom:
+        # Imagenes Escaladas que son escaldas solo cuando se hace zoom:
         self.atrasus_ecalado = self.atrasus
         self.fronteus_ecalado = self.fronteus
         self.fronteuscaminando1_esclado = self.fronteuscaminando1
         self.fronteuscaminando2_esclado = self.fronteuscaminando2
         self.atrasuscaminando1_esclado = self.atrasuscaminando1
         self.atrasuscaminando2_esclado = self.atrasuscaminando2
+
+        # Yacimiento petrolifero del jugador:
+        self.lista_yacimiento_petroleo_jugador = []
 
     def EscalarImagenJugador(self, zoom_cambiado=False):
         '''
