@@ -3,7 +3,7 @@ import random
 
 # Define el tamaño de la pantalla y la velocidad de fotogramas
 ANCHO_PANTALLA = 1000
-ALTO_PANTALLA = 600
+ALTO_PANTALLA = 1000
 FPS = 60
 
 # Inicializa Pygame
@@ -16,7 +16,7 @@ pygame.display.set_caption("Ejemplo Pygame")
 # Crea los cuadrados
 posicion_cuadrado1 = [random.randint(0, ANCHO_PANTALLA), random.randint(0, ALTO_PANTALLA)]
 posicion_cuadrado2 = [random.randint(0, ANCHO_PANTALLA), random.randint(0, ALTO_PANTALLA)] # azul
-tamanio_cuadrado = 20
+tamanio_cuadrado = 10
 
 #Lista cuadrados azules:
 lista_cuadrado_azul = [posicion_cuadrado2]
@@ -52,7 +52,9 @@ while jugando:
     MoverRojoMouse()
 
     # Mueve el segundo cuadrado
-    mover_cuadrado(posicion_cuadrado1, lista_cuadrado_azul[0], 100, 5)
+    x, y = posicion_cuadrado1
+    posicion_alterada = x, y
+    mover_cuadrado(posicion_alterada, lista_cuadrado_azul[0], 100, 5)
 
     #Ahora los otros 5 cuadrados se seguiran al anterior el primero seria lista_cuadrado_azul[0]
 
