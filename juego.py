@@ -16,6 +16,9 @@ class Juego:
         # Cantidad de zoom
         self.cantidad_zoom = 1
         self.zoom_cambiado = False
+        
+        #Cargo Fuente:
+        self.ruta_fuente = "MinimalPixelFont.ttf"
 
         # Menu local jugando:
         self.imagen_mapa = pygame.image.load("mapa.png")
@@ -32,6 +35,15 @@ class Juego:
         self.imagen_marcador = pygame.image.load("marcador.png")
         self.pos_imagen_marcador = (667, 11)
         self.dimensiones_imagen_marcador = (self.imagen_marcador.get_width(), self.imagen_marcador.get_height())
+
+        #Cantidad Recursos
+        self.fuente_recursos = pygame.font.Font(self.ruta_fuente, 50)
+        self.petroleo_jugador = 0
+        self.imagen_gota_petroleo = pygame.image.load("gota_petroleo.png")
+        self.gota_petroleo_pos = (9, 44)
+        self.imagen_bala_icono = pygame.image.load("bala_icono.png")
+        self.balas_jugador = 0
+        self.bala_icono_pos = (9, 120)
 
         # Tamaño real de mapa:
         self.mapa_ancho = 6400
@@ -76,8 +88,14 @@ class Juego:
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
 
         self.lista_yacimiento_petroleo = []
+        self.lista_yacimiento_petroleo.append([200, 200, "petroleo"])
+        self.lista_yacimiento_petroleo.append([200, 6000, "petroleo"])
         for i in range(30):
-            self.lista_yacimiento_petroleo.append((randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"))
+            self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
+
+        self.lista_balas_iconos = []
+        for a in range(200):
+            self.lista_balas_iconos.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "bala"])
 
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
@@ -91,12 +109,11 @@ class Juego:
         self.screen = pygame.display.set_mode((self.ancho_ventana, self.altura_ventana))
         pygame.display.set_caption("Salva a tu soldado Ryan")
 
-        #Cargo Fuente:
-        self.ruta_fuente = "MinimalPixelFont.ttf"
+        
 
         # Configuramos la posición inicial de la cámara
-        self.camera_x = -200
-        self.camera_y = -200
+        self.camera_x = 0
+        self.camera_y = 0
 
         # Configuramos la velocidad de la cámara
         self.camera_speed = 4
@@ -108,6 +125,40 @@ class Juego:
         self.angulo = 0
         self.mouse_x = 0
         self.mouse_y = 0
+
+        self.move_to(50, 50, 200, 200)
+
+    def move_to(self, x1, y1, x2, y2):
+    # Calculate the distance to move in the x-axis direction
+        cantidad_abajo = 0
+        cantidad_derecha = 0
+        if x2 < x1:
+            dx = abs(x1 - x2)
+            print(f"Moving left by {dx} units.")
+        elif x2 > x1:
+            dx = abs(x2 - x1)
+            print(f"Moving right by {dx} units.")
+        else:
+            print("Not moving in the x-axis direction.")
+            dx = 0
+        
+        # Calculate the distance to move in the y-axis direction
+        if y2 > y1:
+            dy = abs(y1 - y2)
+            print(f"Moving down by {dy} units.")
+        elif y2 < y1:
+            dy = abs(y2 - y1)
+            print(f"Moving up by {dy} units.")
+        else:
+            print("Not moving in the y-axis direction.")
+            dy = 0
+    
+        # Actually move to the destination position
+        # (replace this with your own code that does the actual movement)
+        return cantidad_derecha, cantidad_abajo
+        
+
+            
 
     def Distancia2Puntos(self, x1, y1, x2, y2):
         distancia = math.sqrt((x2-x1)**2+(y2-y1)**2)
@@ -189,7 +240,7 @@ class Juego:
         for lista in range(len(lista_de_listas_de_objeto)):
             lista_objeto_jugador = lista_de_listas_de_objeto[lista].copy() + lista_objeto_jugador
 
-
+        
 
         #Ahora metemos jugador en nuestra nueva lista
         lista_objeto_jugador.append([jugador.posjugador_x, jugador.posjugador_y, "jugador"]) # Añadimos pos del jugador a la lista
@@ -203,15 +254,18 @@ class Juego:
 
             
             # En caso de que el objeto este delante del jugador osea "y" dibujamos:
-            if lista_objeto_jugador[i][-1] == "jugador":
+            if lista_objeto_jugador[i][-1] == "bala":
+                surface_pintar.blit(lista_imagenes_escaladas[2], (x, y)) # Sin mitad me interesa que este detras
+            elif lista_objeto_jugador[i][-1] == "jugador":
                 jugador.ImprimirJugador(self.screen, juego.angulo, None,  frame_actual)
-                
             elif lista_objeto_jugador[i][-1] == "arbol":
                 surface_pintar.blit(lista_imagenes_escaladas[0], (x, y-(lista_imagenes_escaladas[0].get_height()/1.5))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
                 pygame.draw.circle(surface_pintar, (255, 255, 0), (x, y), 5)
             elif lista_objeto_jugador[i][-1] == "petroleo":
                 surface_pintar.blit(lista_imagenes_escaladas[1], (x, y-(lista_imagenes_escaladas[1].get_height()/1.5))) #Lo imprimo la mitad porque quiero lograr el efecto de que si pasa por la mitad imprime de frente
+            
 
+            
     def EncontrarPuntoMinimapa(self, pos_jugador_x, pos_jugador_y, ancho_minimapa, alto_minimapa, anchura_mapa, altura_mapa):
         '''
         Esta funcion pequeña coge la posicion del jugador y la anchura y altura del minimapa y el mapa
@@ -235,6 +289,32 @@ class Juego:
 
         # Marcador:
         self.screen.blit(self.imagen_marcador, self.pos_imagen_marcador)
+
+        # Ahora la cantidad de petroleo que tiene el jugador:
+        self.screen.blit(self.imagen_gota_petroleo, self.gota_petroleo_pos)
+        # Texto:
+        texto_petroleo = ("X " + str(self.petroleo_jugador))
+        # Crear una superficie de texto usando la fuente
+        surface_texto_petroleo = self.fuente_recursos.render(texto_petroleo, True, (25, 25, 25))
+        # Obteniendo el rectángulo para la superficie de texto
+        rect_texto_petroleo = surface_texto_petroleo.get_rect()
+        # Posicion:
+        rect_texto_petroleo.topleft = ((self.gota_petroleo_pos[0]+80, self.gota_petroleo_pos[1]+15))
+        self.screen.blit(surface_texto_petroleo, rect_texto_petroleo)
+        
+
+        # Y balas:
+        self.screen.blit(self.imagen_bala_icono, self.bala_icono_pos)
+        # Texto:
+        texto_balas = ("X " + str(self.balas_jugador))
+        # Crear una superficie de texto usando la fuente
+        surface_texto_balas = self.fuente_recursos.render(texto_balas, True, (168, 153, 17))
+        # Obteniendo el rectángulo para la superficie de texto
+        rect_texto_balas = surface_texto_balas.get_rect()
+        # Posicion:
+        rect_texto_balas.topleft = ((self.bala_icono_pos[0]+80, self.bala_icono_pos[1]+15))
+        self.screen.blit(surface_texto_balas, rect_texto_balas)
+
 
     def ColocarYacimiento(self, lista_yacimientos, lista_yacimiento_jugador, usuario_jugador):
 
@@ -278,7 +358,7 @@ class Juego:
 
 
                     for yacimiento in range(len(lista_yacimientos)):
-                        print(lista_yacimientos[yacimiento])
+              
                         x_yacimiento = int((lista_yacimientos[yacimiento][0]-self.camera_x)*self.cantidad_zoom)
                         y_yacimiento = int((lista_yacimientos[yacimiento][1]-self.camera_y)*self.cantidad_zoom)
                         x_yacimiento = x_yacimiento *-1
@@ -293,17 +373,30 @@ class Juego:
                             x_yacimiento, y_yacimiento =  lista_yacimientos[yacimiento][0], lista_yacimientos[yacimiento][1]
 
                             del lista_yacimientos[yacimiento]
-                            lista_yacimiento_jugador.append([jugador.posjugador_x, jugador.posjugador_y, usuario_jugador, 5, "yacimiento"])
+
+
+                            jugador.lista_yacimiento_petroleo_jugador.append([jugador.posjugador_x, jugador.posjugador_y, usuario_jugador, 2, "yacimiento"])
                             print("elemento añadido a lista del jugadoor: " + usuario_jugador)
+
                             self.tecla_1_pulsado = False
                             break
 
                 
 
-    def Crear_Surface_Fuente_Imprimir(self, tamaño_fuente, texto, color, posicion):
-        fuente = pygame.font.Font(self.ruta_fuente, tamaño_fuente)
+    def Crear_Surface_Fuente_Imprimir(self, tamaño_fuente, texto, color, posicion, surface_opcional_encima, offset_xy=None):
+        '''
+        Me tienes que dar o el surface de la imagen que quieres poner encima el texto o poner el offset para ajustar pos texto
+        '''
+        fuente = pygame.font.Font(self.ruta_fuente, int(tamaño_fuente*self.cantidad_zoom))
         x, y = posicion
-        y = y-(y/2)
+        if not surface_opcional_encima == None:
+            x, y = (((x-(surface_opcional_encima.get_width()/1.5))+self.camera_x)*self.cantidad_zoom, ((y-(surface_opcional_encima.get_height()/4))+self.camera_y)*self.cantidad_zoom)
+        else:
+            #Me han dado offset_xy
+            x_offset, y_offset = offset_xy
+            x, y = (((x-x_offset)+self.camera_x)*self.cantidad_zoom, ((y-y_offset)+self.camera_y)*self.cantidad_zoom)
+
+        posicion = x, y # Nuevas cordenadas
         # Crear una superficie de texto usando la fuente
         superficie_texto = fuente.render(texto, True, (255, 255, 255))
         # Obteniendo el rectángulo para la superficie de texto
@@ -312,15 +405,40 @@ class Juego:
         rectangulo_texto.topleft = posicion
         self.screen.blit(superficie_texto, rectangulo_texto)
 
-    def BarraVida(self, valor_vida, posicion):
+    def BarraVida(self, valor_vida, posicion, offset=(0, 0)):
         '''
         Esta funcion solo crea una barra de vida que va cambiando segun el valor vida cambie
         '''
         #Primero imagen
-        self.screen.blit(self.imagen_barra_vida, posicion)
-        rect_imagen_copia = pygame.Rect((posicion[0]-posicion[0]/2), posicion[1], self.imagen_barra_vida.get_width()/1.5, self.imagen_barra_vida.get_height()/2)
+        x_sin_camara, y_sin_camara = posicion
+        x_camara_con_offset = ((x_sin_camara+offset[0])+self.camera_x)*self.cantidad_zoom
+        y_camara_con_offset = ((y_sin_camara+offset[1])+self.camera_y)*self.cantidad_zoom
+        x_camara_sin_offset = (x_sin_camara+self.camera_x)*self.cantidad_zoom
+        y_camara_sin_offset = (y_sin_camara+self.camera_y)*self.cantidad_zoom
+
+        posicion = (x_camara_sin_offset, y_camara_sin_offset)
+
+        imagen_escalada_barra = pygame.transform.scale(self.imagen_barra_vida, (self.imagen_barra_vida.get_width() * self.cantidad_zoom, self.imagen_barra_vida.get_height() * self.cantidad_zoom))
+        self.screen.blit(imagen_escalada_barra, posicion)
+
+        #Ahora barra de vida roja
+        offset_x, offset_y = offset
+
+        
         if valor_vida == 5:
-            pygame.draw.rect(self.screen, (145, 14, 14), rect_imagen_copia)
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, imagen_escalada_barra.get_width()/1.4, imagen_escalada_barra.get_height()/2)
+        elif valor_vida == 4:
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, imagen_escalada_barra.get_width()/1.8, imagen_escalada_barra.get_height()/2)
+        elif valor_vida == 3:
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, imagen_escalada_barra.get_width()/2, imagen_escalada_barra.get_height()/2)
+        elif valor_vida == 2:
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, imagen_escalada_barra.get_width()/2.8, imagen_escalada_barra.get_height()/2)
+        elif valor_vida == 1:
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, imagen_escalada_barra.get_width()/5, imagen_escalada_barra.get_height()/2)
+        else:
+            rect_imagen_copia = pygame.Rect((x_camara_con_offset), y_camara_con_offset, 0, imagen_escalada_barra.get_height()/2)
+
+        pygame.draw.rect(self.screen, (145, 14, 14), rect_imagen_copia)
 
 
     
@@ -333,20 +451,20 @@ class Juego:
         '''
         imagen_escalada_yacimiento = pygame.transform.scale(self.imagen_yacimiento_jugador, (self.imagen_yacimiento_jugador.get_width() * self.cantidad_zoom, self.imagen_yacimiento_jugador.get_height() * self.cantidad_zoom))
         for lista in range(len(lista_objeto_usuario)):
-            x, y = lista_objeto_usuario[lista][0], lista_objeto_usuario[lista][0]
+            x_sin_camara, y_sin_camara = lista_objeto_usuario[lista][0], lista_objeto_usuario[lista][1]
             #De posicion real a pos => camara
-            x = (x+self.camera_x)*self.cantidad_zoom
-            y = (y+self.camera_y)*self.cantidad_zoom
+            x = (x_sin_camara+self.camera_x)*self.cantidad_zoom
+            y = (y_sin_camara+self.camera_y)*self.cantidad_zoom
 
             usuario_jugador = lista_objeto_usuario[lista][2]
             vida_objeto = lista_objeto_usuario[lista][3]
 
             #Imprimo imagen
             self.screen.blit(imagen_escalada_yacimiento, (x, y))
-            self.Crear_Surface_Fuente_Imprimir(70, usuario_jugador, (209, 115, 255), (x, y))
+            self.Crear_Surface_Fuente_Imprimir(70, usuario_jugador, (209, 115, 255), (x_sin_camara, y_sin_camara), self.imagen_yacimiento_jugador)
 
             #Ahora barra vida:
-            self.BarraVida(vida_objeto, (x, y))
+            self.BarraVida(vida_objeto, (x_sin_camara, y_sin_camara), (+21, +5))
 
 
 
@@ -386,7 +504,9 @@ class Juego:
             pos_pantalla_x, pos_pantalla_y = rect.x, rect.y
 
             # Movimiento normal del jugador con teclas: w a s d
+            #print("pos_jugador: ", str(jugador.posjugador_x), str(jugador.posjugador_y), "pos_camara: " + str(self.camera_x), str(self.camera_y))
             if keys[pygame.K_a]:
+
                 self.tecla_pulsada = True
                 jugador.posjugador_x = jugador.posjugador_x - 4
                 jugador.posjugador_pantalla_x = jugador.posjugador_pantalla_x  - 4
@@ -450,8 +570,8 @@ class Juego:
 
             self.Cargar_Mapa(self.mapa, self.screen, self.camera_x, self.camera_y) # Cargamos mapa
             
-            lista_imagenes = [self.arbol1, self.yacimiento_petroleo]
-            lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo]
+            lista_imagenes = [self.arbol1, self.yacimiento_petroleo, self.imagen_bala_icono]
+            lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo, self.lista_balas_iconos]
 
             # Cargamos yacimientos:
             self.CargarDecoracion(self.screen, lista_lista_objetos, lista_imagenes, jugador.posjugador_pantalla_y)
@@ -463,8 +583,15 @@ class Juego:
             # Pongo el nuevo angulo:
             self.angulo = datos_mouse[3]
 
+            
+            pygame.draw.circle(self.screen, (255, 240, 255), (50, 50), 10)
+            pygame.draw.circle(self.screen, (255, 240, 255), (jugador.posjugador_x, jugador.posjugador_y), 10)
+
             #Barra inferior
-            self.ColocarYacimiento(self.lista_yacimiento_petroleo, jugador.lista_yacimiento_petroleo_jugador, "Robert Connolly")
+            self.ColocarYacimiento(self.lista_yacimiento_petroleo, jugador.lista_yacimiento_petroleo_jugador, "Robert_Connolly")
+
+            #Miro si icono de la bala colisiona con el jugador:
+            self.ComprobarColisionBalaIJugador((jugador.posjugador_x, jugador.posjugador_y), self.lista_balas_iconos)
 
             #Cargo Menu local:
             self.CargarMenu()
@@ -481,6 +608,18 @@ class Juego:
         distancia = self.Distancia2Puntos(mouse_x, mouse_y, posicion_jugador_x, posicion_jugador_y)
         angulo_degree = self.Angulo2Puntos(mouse_x, mouse_y, posicion_jugador_x, posicion_jugador_y, False)
         return (mouse_x, mouse_y, distancia, angulo_degree)
+    
+    def ComprobarColisionBalaIJugador(self, posicionjugador, lista_balas_icono):
+        posjugador_x, posjugador_y = posicionjugador
+
+        for iterador in range(len(lista_balas_icono)):
+            ibala_x, ibala_y, _ = lista_balas_icono[iterador]
+            #Miramos si el icono de bala colisiona con jugador:
+            if self.Distancia2Puntos(posjugador_x, posjugador_y, ibala_x, ibala_y) < 20:
+                print("colision entre i_bala y jugador!")
+                del lista_balas_icono[iterador] # Elimino la bala de la lista del server
+                self.balas_jugador = self.balas_jugador+1 #Añadimos una bala al jugador
+                break
 
 class Jugador:
     def __init__(self):
@@ -493,6 +632,9 @@ class Jugador:
         self.posjugador_x = 0
         self.angulo_jugador = 0
         self.caja_camara_jugador = (200, 200) # Esto es la caja de colision del jugador
+
+        #Nombre usuario:
+        self.usuario_jugador = "Robert"
 
         # Cargo imagenes:
         self.fronteus = pygame.image.load("frenteus.png")
@@ -514,6 +656,7 @@ class Jugador:
 
         # Yacimiento petrolifero del jugador:
         self.lista_yacimiento_petroleo_jugador = []
+
 
     def EscalarImagenJugador(self, zoom_cambiado=False):
         '''
@@ -578,6 +721,7 @@ class Jugador:
 
 juego = Juego()
 jugador = Jugador()
+jugador2 = Jugador()
 
 
 juego.zoom_teclado()
