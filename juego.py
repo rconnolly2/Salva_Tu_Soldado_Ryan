@@ -35,6 +35,9 @@ class Juego:
         self.imagen_marcador = pygame.image.load("marcador.png")
         self.pos_imagen_marcador = (667, 11)
         self.dimensiones_imagen_marcador = (self.imagen_marcador.get_width(), self.imagen_marcador.get_height())
+        self.fuente_nombre = pygame.font.Font(self.ruta_fuente, 35)
+        self.posnombre = (695, 45)
+        self.imagen_cabeza_ryan = pygame.image.load("cabeza_ryan.png")
 
         #Cantidad Recursos
         self.fuente_recursos = pygame.font.Font(self.ruta_fuente, 50)
@@ -290,6 +293,10 @@ class Juego:
         # Marcador:
         self.screen.blit(self.imagen_marcador, self.pos_imagen_marcador)
 
+        lista_usuarios = [jugador.usuario_jugador, jugador.usuario_jugador, jugador.usuario_jugador]
+        lista_de_ryans = [jugador.numero_ryans, jugador.numero_ryans, jugador.numero_ryans]
+        self.ImprimirMarcador(lista_usuarios, lista_de_ryans)
+
         # Ahora la cantidad de petroleo que tiene el jugador:
         self.screen.blit(self.imagen_gota_petroleo, self.gota_petroleo_pos)
         # Texto:
@@ -314,6 +321,49 @@ class Juego:
         # Posicion:
         rect_texto_balas.topleft = ((self.bala_icono_pos[0]+80, self.bala_icono_pos[1]+15))
         self.screen.blit(surface_texto_balas, rect_texto_balas)
+
+
+    def ImprimirMarcador(self, lista_nombre_usuarios, lista_ryan_raptados):
+        '''
+        Esta funciona coge todoso los nombres de jugadores y la lista de listas de ryans capturados
+        si en una partida de 3 jugadores hay una persona consigue capturar 2 ryans y defender su ryan gana:
+        este marcador imprime: nombre y la segunda linia 3 cabezas segun las que tenga capturadas
+        !IMPORTANTE Mantener el mismo orden en las 2 listas ya que usaran el mismo iterador
+        '''
+        diferencia_y = 16
+        pos_x, pos_y = self.posnombre[0], self.posnombre[1]+15
+        for i in range(len(lista_nombre_usuarios)):
+            #Imprimo el nombre de cada usuario de la lista:
+            # Texto:
+            texto_nombre = lista_nombre_usuarios[i]
+            # Crear una superficie de texto usando la fuente
+            surface_texto_nombre = self.fuente_nombre.render(texto_nombre, True, (206, 90, 235))
+            # Obteniendo el rectángulo para la superficie de texto
+            rect_texto_nombre = surface_texto_nombre.get_rect()
+            # Posicion:
+            rect_texto_nombre.topleft = ((pos_x, pos_y+15))
+            self.screen.blit(surface_texto_nombre, rect_texto_nombre)
+
+            pos_y = pos_y+diferencia_y
+
+            #Imprimimos las cabezas de ryan segun jugador.numero_ryans
+            if lista_ryan_raptados[i] == 1:
+                self.screen.blit(self.imagen_cabeza_ryan, (pos_x+3, pos_y+22)) #offset
+                print("imprimiendo cabeza"+ str(pos_y))
+            elif lista_ryan_raptados[i] == 2:
+                for a in range(2):
+                    self.screen.blit(self.imagen_cabeza_ryan, (pos_x+3, pos_y+22))
+                    pos_x = pos_x + 20
+                pos_x = self.posnombre[0]
+            elif lista_ryan_raptados[i] == 3:
+                for a in range(3):
+                    self.screen.blit(self.imagen_cabeza_ryan, (pos_x+3, pos_y+22))
+                    pos_x = pos_x + 20
+                pos_x = self.posnombre[0]
+
+            #Añadimos y + 16 para el siguiente nombre
+            pos_y = pos_y+diferencia_y
+        
 
 
     def ColocarYacimiento(self, lista_yacimientos, lista_yacimiento_jugador, usuario_jugador):
@@ -633,8 +683,12 @@ class Jugador:
         self.angulo_jugador = 0
         self.caja_camara_jugador = (200, 200) # Esto es la caja de colision del jugador
 
+        #Ryan
+        self.numero_ryans = 2
+        self.pos_miryan = (self.posjugador_x, self.posjugador_y)
+
         #Nombre usuario:
-        self.usuario_jugador = "Robert"
+        self.usuario_jugador = "Roberto"
 
         # Cargo imagenes:
         self.fronteus = pygame.image.load("frenteus.png")
