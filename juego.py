@@ -656,14 +656,27 @@ class Juego:
                 
             self.screen.fill((255, 255, 255)) # Rellenamos la pantalla de blanco
 
-            
+            datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
+            # Pongo el nuevo angulo:
+            self.angulo = datos_mouse[3]
 
             self.Cargar_Mapa(self.mapa, self.screen, self.camera_x, self.camera_y) # Cargamos mapa
+
+            #Miro si quiero una nueva bala
+            if self.angulo > -90 and self.angulo < 0:
+                jugador.DispararBala((jugador.posjugador_x+26, jugador.posjugador_y+26), 10, jugador.imagen_bala)
+            else:
+                jugador.DispararBala((jugador.posjugador_x+10, jugador.posjugador_y+26), 10, jugador.imagen_bala)
+
+            #ImprimirBalas
+            jugador.ImprimirBalas(self.screen, self.cantidad_zoom, (self.camera_x, self.camera_y))
+            #Elimino las balas que esten fuera del mapa para ahorrar memoria:
+            jugador.EliminarBalasFuera(self.mapa_ancho)
             
             lista_imagenes = [self.arbol1, self.yacimiento_petroleo, self.imagen_bala_icono]
             lista_lista_objetos = [self.lista_arboles, self.lista_yacimiento_petroleo, self.lista_balas_iconos]
 
-            # Cargamos yacimientos:
+            # Cargamos yacimientos, jugador, arbol etc ...:
             self.CargarDecoracion(self.screen, lista_lista_objetos, lista_imagenes, jugador.posjugador_pantalla_y)
 
             #Cargamos objetos de jugador:
@@ -671,19 +684,8 @@ class Juego:
             # Cargo tienda jugador
             self.CargarObjetosJugadores(jugador.lista_tienda_campaña, self.imagen_tienda_campana, (+10, +70), (+20, -20))
             
-            datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
-            # Pongo el nuevo angulo:
-            self.angulo = datos_mouse[3]
             
-            #Miro si quiero una nueva bala
-            jugador.DispararBala((jugador.posjugador_x, jugador.posjugador_y), self.angulo, 10, jugador.imagen_bala)
-            #Elimino las balas que esten fuera del mapa para ahorrar memoria:
-            jugador.EliminarBalasFuera(self.mapa_ancho)
-            #Imprimo las balas
-            jugador.ImprimirBalas(self.screen, self.cantidad_zoom, (self.camera_x, self.camera_y))
 
-            imagen_rotada = pygame.transform.rotate(self.imagen_cabeza_ryan, self.angulo)
-            self.screen.blit(imagen_rotada, (jugador.posjugador_pantalla_x, jugador.posjugador_pantalla_y))
 
             pygame.draw.circle(self.screen, (255, 240, 255), (50, 50), 10)
             pygame.draw.circle(self.screen, (255, 240, 255), (jugador.posjugador_x, jugador.posjugador_y), 10)
@@ -755,6 +757,9 @@ class Jugador:
         self.fronteus = pygame.image.load("frenteus.png")
         self.atrasus = pygame.image.load("atrasus.png")
         self.imagen_bala = pygame.image.load("bala.png")
+        self.rifle1 = pygame.image.load("rifle.png")
+        self.rifle2 = pygame.image.load("rifle2.png")
+
 
         # Bala:
         self.lista_bala_jugador = []
@@ -772,6 +777,8 @@ class Jugador:
         self.fronteuscaminando2_esclado = self.fronteuscaminando2
         self.atrasuscaminando1_esclado = self.atrasuscaminando1
         self.atrasuscaminando2_esclado = self.atrasuscaminando2
+        self.rifle1_escalado = self.rifle1
+        self.rifle2_escalado = self.rifle2
 
         # Yacimiento petrolifero del jugador:
         self.lista_yacimiento_petroleo_jugador = []
@@ -790,6 +797,8 @@ class Jugador:
             self.fronteuscaminando2_esclado = pygame.transform.scale(self.fronteuscaminando2, (self.fronteuscaminando2.get_width() * juego.cantidad_zoom, self.fronteuscaminando2.get_width() * juego.cantidad_zoom))
             self.atrasuscaminando1_esclado = pygame.transform.scale(self.atrasuscaminando1, (self.atrasuscaminando1.get_width() * juego.cantidad_zoom, self.atrasuscaminando1.get_width() * juego.cantidad_zoom))
             self.atrasuscaminando2_esclado = pygame.transform.scale(self.atrasuscaminando2, (self.atrasuscaminando2.get_width() * juego.cantidad_zoom, self.atrasuscaminando2.get_width() * juego.cantidad_zoom))
+            self.rifle1_escalado = pygame.transform.scale(self.rifle1, (self.rifle1.get_width() * juego.cantidad_zoom, self.rifle1.get_height() * juego.cantidad_zoom))
+            self.rifle2_escalado = pygame.transform.scale(self.rifle2, (self.rifle2.get_width() * juego.cantidad_zoom, self.rifle2.get_height() * juego.cantidad_zoom))
 
             zoom_cambiado = False
 
@@ -799,6 +808,9 @@ class Jugador:
         
         x = self.posjugador_pantalla_x *juego.cantidad_zoom
         y = self.posjugador_pantalla_y *juego.cantidad_zoom
+        x_rifle = (self.posjugador_pantalla_x+18) *juego.cantidad_zoom
+        y_rifle = (self.posjugador_pantalla_y+20) *juego.cantidad_zoom
+        
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_w] or keys[pygame.K_a] or keys[pygame.K_d] or keys[pygame.K_s]:
@@ -819,19 +831,35 @@ class Jugador:
                 tecla_pulsada = False
                 pantalla.blit(imagen_actual, (x, y))
                 
+                
 
         if angulo_objectivo < -1 and angulo_objectivo > -180:
 
             if tecla_pulsada == False:
                 pantalla.blit(self.fronteus_ecalado, (x, y))
+
             else:
                 if frame_actual % 2 == 0:
                     imagen_actual = self.fronteuscaminando1_esclado
                 else:
                     imagen_actual = self.fronteuscaminando2_esclado
                 
-                pantalla.blit(imagen_actual, (x, y))
                 tecla_pulsada = False
+                pantalla.blit(imagen_actual, (x, y))
+
+        #De arriba a abajo izq-der
+        if angulo_objectivo > -90 and angulo_objectivo < 0:
+            rifle_rotado = pygame.transform.rotate(self.rifle1_escalado, angulo_objectivo)
+            
+            imagen_actual_rifle = rifle_rotado
+            pantalla.blit(imagen_actual_rifle, (x_rifle, y_rifle))
+
+         #De arriba a abajo der-izq
+        if angulo_objectivo < -90 and angulo_objectivo > -180:
+            rifle_rotado = pygame.transform.rotate(self.rifle2_escalado, angulo_objectivo)
+            
+            imagen_actual_rifle = rifle_rotado
+            pantalla.blit(imagen_actual_rifle, (x_rifle, y_rifle))
 
     def DispararBala(self, posicion_bala, velocidad_bala, surface_bala):
         for event in pygame.event.get():
