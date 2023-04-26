@@ -55,7 +55,7 @@ while True:
             adjusted_degrees = degrees + 90
             if adjusted_degrees > 360:
                 adjusted_degrees -= 360
-            print(f"Ángulo: {adjusted_degrees:.2f} grados")
+            print(f"Ángulo: {degrees:.2f} grados")
 
     # mover el proyectil
     try:
