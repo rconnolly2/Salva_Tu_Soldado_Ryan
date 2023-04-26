@@ -457,6 +457,8 @@ class Juego:
                     #Raton a hecho click
 
                     raton_x, raton_y = tuple(pygame.mouse.get_pos())
+                    raton_x = int(raton_x-(50*self.cantidad_zoom)) #Le resto la mitad del cuadro 100px porque queremos el cuadrado del raton en el centro y no en la esquina de arriba
+                    raton_y = int(raton_y-(50*self.cantidad_zoom))
                     raton_x = (raton_x+(self.camera_x*-1))
                     raton_y = (raton_y+(self.camera_y*-1))
                     #self.camera_x*-1 convierte camara en positivo para que lo pueda sumar a posicion raton
@@ -673,6 +675,13 @@ class Juego:
             # Pongo el nuevo angulo:
             self.angulo = datos_mouse[3]
             
+            #Miro si quiero una nueva bala
+            jugador.DispararBala((jugador.posjugador_x, jugador.posjugador_y), self.angulo, 10, jugador.imagen_bala)
+            #Elimino las balas que esten fuera del mapa para ahorrar memoria:
+            jugador.EliminarBalasFuera(self.mapa_ancho)
+            #Imprimo las balas
+            jugador.ImprimirBalas(self.screen, self.cantidad_zoom, (self.camera_x, self.camera_y))
+
             imagen_rotada = pygame.transform.rotate(self.imagen_cabeza_ryan, self.angulo)
             self.screen.blit(imagen_rotada, (jugador.posjugador_pantalla_x, jugador.posjugador_pantalla_y))
 
@@ -699,7 +708,9 @@ class Juego:
 
     def PosicionMouse(self, posicion_jugador_x, posicion_jugador_y):
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        distancia = self.Distancia2Puntos(mouse_x, mouse_y, posicion_jugador_x, posicion_jugador_y)
+
+
+        distancia = self.Distancia2Puntos(mouse_x-self.camera_x, mouse_y-self.camera_y, posicion_jugador_x, posicion_jugador_y)
         angulo_degree = self.Angulo2Puntos(mouse_x, mouse_y, posicion_jugador_x, posicion_jugador_y, False)
         return (mouse_x, mouse_y, distancia, angulo_degree)
     
@@ -743,7 +754,10 @@ class Jugador:
         # Cargo imagenes:
         self.fronteus = pygame.image.load("frenteus.png")
         self.atrasus = pygame.image.load("atrasus.png")
-        self.bala = pygame.image.load("bala.png")
+        self.imagen_bala = pygame.image.load("bala.png")
+
+        # Bala:
+        self.lista_bala_jugador = []
 
         # Caminando:
         self.fronteuscaminando1 = pygame.image.load("frenteuscaminando1.png")
@@ -818,6 +832,69 @@ class Jugador:
                 
                 pantalla.blit(imagen_actual, (x, y))
                 tecla_pulsada = False
+
+    def DispararBala(self, posicion_bala, velocidad_bala, surface_bala):
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONUP:
+                raton_x, raton_y = pygame.mouse.get_pos()
+
+                velocidad_bala = 3
+                raton_x = (raton_x+(juego.camera_x*-1))
+                raton_y = (raton_y+(juego.camera_y*-1))
+                print(raton_x, raton_y, self.posjugador_x, self.posjugador_y)
+                angulo_direccion = juego.Angulo2Puntos(self.posjugador_x, self.posjugador_y, raton_x, raton_y, radian=False)
+                    
+                surface_bala_rotada = pygame.transform.rotate(surface_bala, angulo_direccion)
+                
+                #Convierto en angulo de grados a radianes y lo invierto con *-1:
+                angulo_radianes = math.radians(angulo_direccion*-1)
+                
+                posicion_bala_x, posicion_bala_y = posicion_bala
+
+                projectile_dx = velocidad_bala * math.cos(angulo_radianes)
+                projectile_dy = velocidad_bala * math.sin(angulo_radianes)
+
+                #Nueva bala en la lista (posicion.x, posicion.y, direccion.x, direcciom.y, surface_bala_rotada):
+                #Hay que cambiar la posicion con otra funcion para imprimir por pantalla
+                self.lista_bala_jugador.append([posicion_bala_x, posicion_bala_y, projectile_dx*-1, projectile_dy*-1, surface_bala_rotada])
+
+    def ImprimirBalas(self, pantalla, cantidad_zoom, camara_tupla):
+
+        
+        #Esta funcion solo cambia la posicion de la bala con la direccion y imprime por pantalla:
+        for i in range(len(self.lista_bala_jugador)):
+            #Añado camara y zoom al surface rotado:
+            surface_bala_rotada = self.lista_bala_jugador[i][4]
+            camara_x, camara_y = camara_tupla
+            surface_ajustado_camara = pygame.transform.scale(surface_bala_rotada, (surface_bala_rotada.get_width()*cantidad_zoom, surface_bala_rotada.get_height()*cantidad_zoom))
+
+            
+            self.lista_bala_jugador[i][0] = self.lista_bala_jugador[i][0] + self.lista_bala_jugador[i][2] # direccion x
+            self.lista_bala_jugador[i][1] = self.lista_bala_jugador[i][1] + self.lista_bala_jugador[i][3] # direccion y
+            # imprimo
+            posicionbala_x, posicionbala_y = (self.lista_bala_jugador[i][0]+camara_x)*cantidad_zoom, (self.lista_bala_jugador[i][1]+camara_y)*cantidad_zoom
+            pantalla.blit(surface_ajustado_camara, (posicionbala_x, posicionbala_y))
+
+    def EliminarBalasFuera(self, tamano_mapa):
+        '''
+        Esta funcion solo elimina las balas que salgan de 0 a 6400
+        '''
+        for i in range(len(self.lista_bala_jugador)):
+            posbala_x = self.lista_bala_jugador[i][0]
+            posbala_y = self.lista_bala_jugador[i][1]
+
+            if posbala_x > tamano_mapa or posbala_x < 0:
+                del self.lista_bala_jugador[i]
+                break
+            elif posbala_y > tamano_mapa or posbala_y < 0:
+                del self.lista_bala_jugador[i]
+                break
+
+
+    
+    
+
+            
 
         
 
