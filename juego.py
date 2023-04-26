@@ -656,7 +656,7 @@ class Juego:
                 
             self.screen.fill((255, 255, 255)) # Rellenamos la pantalla de blanco
 
-            datos_mouse = self.PosicionMouse(jugador.posjugador_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
+            datos_mouse = self.PosicionMouse(jugador.posjugador_pantalla_x, jugador.posjugador_pantalla_y) # Esto nos da una tupla con : x, y, distancia y angulo en grados
             # Pongo el nuevo angulo:
             self.angulo = datos_mouse[3]
 
@@ -743,7 +743,6 @@ class Jugador:
         # Posicion real sin camara añadida
         self.posjugador_y = 0
         self.posjugador_x = 0
-        self.angulo_jugador = 0
         self.caja_camara_jugador = (200, 200) # Esto es la caja de colision del jugador
 
         #Ryan
@@ -806,10 +805,10 @@ class Jugador:
     def ImprimirJugador(self, pantalla, angulo_objectivo, direccion: str, frame_actual):
         
         
-        x = self.posjugador_pantalla_x *juego.cantidad_zoom
-        y = self.posjugador_pantalla_y *juego.cantidad_zoom
-        x_rifle = (self.posjugador_pantalla_x+18) *juego.cantidad_zoom
-        y_rifle = (self.posjugador_pantalla_y+20) *juego.cantidad_zoom
+        x = (self.posjugador_x+juego.camera_x) * juego.cantidad_zoom
+        y = (self.posjugador_y+juego.camera_y) * juego.cantidad_zoom
+        x_rifle = (self.posjugador_x+juego.camera_x+18) *juego.cantidad_zoom
+        y_rifle = (self.posjugador_y+juego.camera_y+20) *juego.cantidad_zoom
         
         keys = pygame.key.get_pressed()
 
@@ -846,7 +845,7 @@ class Jugador:
                 
                 tecla_pulsada = False
                 pantalla.blit(imagen_actual, (x, y))
-
+        print(angulo_objectivo)
         #De arriba a abajo izq-der
         if angulo_objectivo > -90 and angulo_objectivo < 0:
             rifle_rotado = pygame.transform.rotate(self.rifle1_escalado, angulo_objectivo)
@@ -917,6 +916,16 @@ class Jugador:
             elif posbala_y > tamano_mapa or posbala_y < 0:
                 del self.lista_bala_jugador[i]
                 break
+
+class Soldado(Jugador):
+    def __init__(self, pos_spawn):
+        #Aqui elimino todas las propiedades que no voy a utilizar:
+        del self.posjugador_pantalla_x, self.posjugador_pantalla_y
+        del self.numero_ryans, self.pos_miryan, self.usuario_jugador, self.lista_tienda_campaña, self.lista_yacimiento_petroleo_jugador
+
+        self.posjugador_x, self.posjugador_y = pos_spawn
+
+
 
 
     

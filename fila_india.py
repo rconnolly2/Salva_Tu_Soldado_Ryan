@@ -48,6 +48,17 @@ while jugando:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             jugando = False
+
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_1:
+                print("Key 1 pressed")
+                del lista_cuadrado_azul[0]
+            if evento.key == pygame.K_3:
+                print("Key 3 pressed")
+                del lista_cuadrado_azul[3]
+            if evento.key == pygame.K_5:
+                print("nuevos cuadrados azules")
+                lista_cuadrado_azul.append([random.randint(0, ANCHO_PANTALLA), random.randint(0, ALTO_PANTALLA)])
     #Mover cuadrado rojo:
     MoverRojoMouse()
 
