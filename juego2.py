@@ -12,22 +12,19 @@ import time
 class Host:
     def __init__(self, IP_HOST, Puerto, Es_Host=False):
         # Seccion sockets:
-        
-        self.lista_clientes = []
-        self.lista_usuarios = []
         # Create a socket object
         if Es_Host == True:
-            print("funciona")
+
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Bind del socket
-            self.socket.bind((IP_HOST, Puerto))
-            self.socket.listen(3) #Limitado a 2 jugador + host = 3 
-            hilo_nueva_conexion = threading.Thread(target=self.NuevaConexion) # Creo hilo nuevo
-        
-            hilo_nueva_conexion.start() # Inicio hilo
+
         else: # si no es host se conecta a la ip
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((IP_HOST, Puerto))
+        
+        self.lista_clientes = []
+        self.lista_usuarios = []
+
         
 
 
@@ -114,7 +111,7 @@ class Host:
 
         # Mis listas de decoracion ("esto lo tendra que cargar el server"):
         self.lista_arboles = []
-        for i in range(100):
+        for i in range(200):
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
 
         self.lista_yacimiento_petroleo = []
@@ -124,7 +121,7 @@ class Host:
             self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
 
         self.lista_balas_iconos = []
-        for a in range(100):
+        for a in range(200):
             self.lista_balas_iconos.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "bala"])
 
         # Cargo imagenes:
@@ -195,91 +192,53 @@ class Host:
         Esta funcion es para que el host reciba nuevos usuarios y lo envia a su lista de usuarios:
         '''
         while True:
-            if len(self.lista_clientes) < 3: # Limite de 2 jugador +
-                cliente, addr = self.socket.accept()
+            
+            cliente, addr = self.socket.accept()
             print("Nueva conexion con ip: " + str(addr))
-
-            #Añadimos cliente a nuestra lista de clientes :
             self.lista_clientes.append(cliente)
-            print('Number of connected clients:', len(self.lista_clientes))
             # Decirle a cliente que nos de su nombre_usuario
-            dame_tu_nombre = ["NOMBRE", ""]
+            dame_tu_nombre = "NOMBRE"
 
             # Convertir datos python a bytes
-            datos = json.dumps(dame_tu_nombre)
+            datos = 1
 
             # Enviar bytes sobre socket
-            cliente.send(datos.encode())
-
-
-
+            cliente.send(datos)
             hilo_recibir = threading.Thread(target=self.RecibirMensaje, args=(cliente,)) # Creo hilo nuevo
-            hilo_recibir.start()
-            
+            hilo_recibir.start() # Inicio hilo
 
     def RecibirMensaje(self, cliente):
         while True:
             try:
-                mensaje_tipo = cliente.recv(2048)
+                mensaje_tipo = cliente.recv(1024)
                 if len(mensaje_tipo) > 0: # no esta vacio
                     print("mensaje no esta vacio: ")
-                    mensaje_tipo = mensaje_tipo.decode()
-                    mensaje_desencriptado = json.loads(mensaje_tipo)
-
-                    print("Cliente dijo: " + str(mensaje_desencriptado))
-                    print(len(mensaje_desencriptado[0]) == len("1"))
-                    #Aqui tenemos los tipos de mensaje y luego los mensajes:
-
-                    if mensaje_desencriptado[0] == "USUARIO":
-                        self.lista_usuarios.append(mensaje_desencriptado[1]) #Añado su nombre a mi lista
+                    mensaje_tipo_desencriptado = 1
+                    if mensaje_tipo_desencriptado == "USUARIO":
+                        #Me va a enviar su usuario:
+                        mensaje = cliente.recv(1024)
+                        mensaje_desencriptado = 1
+                        self.lista_usuarios.append(mensaje_desencriptado)
+                        print("Cliente dijo: " + str(mensaje_desencriptado))
                         print("enviando broadcast")
-                        print(self.lista_clientes)
-                        time.sleep(0.3)
-                        self.Broadcast("Gracias por tu usuario! cliente", cliente)
-                    elif mensaje_desencriptado[0] == "LISTA_ARBOLES":
-                        #Me va a enviar su usuario:
-                        lista_arboles = [["LISTA_ARBOLES"], [self.lista_arboles]]
-                        lista_arboles_encriptado = json.dumps(lista_arboles)
-                        lista_arboles_encriptado = lista_arboles_encriptado.encode()
-                        print("Enviando arboles")
-                        cliente.send(lista_arboles_encriptado)
-                    elif mensaje_desencriptado[0] == "LISTA_YACIMIENTOS":
-                        #Me va a enviar su usuario:
-                        lista_yacimientos = [["LISTA_YACIMIENTOS"], [self.lista_yacimiento_petroleo]]
-                        lista_yacimientos_encriptado = json.dumps(lista_yacimientos)
-                        lista_yacimientos_encriptado = lista_yacimientos_encriptado.encode()
-                        print("Enviando yacimientos")
-                        cliente.send(lista_yacimientos_encriptado)
-                    elif mensaje_desencriptado[0] == "LISTA_BALAS":
-                        #Me va a enviar su usuario:
-                        lista_balas = [["LISTA_BALAS"], [self.lista_balas_iconos]]
-                        lista_balas_encriptado = json.dumps(lista_balas)
-                        lista_balas_encriptado = lista_balas_encriptado.encode()
-                        print("Enviando balas")
-                        cliente.send(lista_balas_encriptado)
-                    else:
-                        #No le he entendido
-                        no_entendido = "No te he entendido"
-                        no_entendido = json.dumps(no_entendido)
-                        no_entendido = no_entendido.encode()
                         time.sleep(0.1)
-                        cliente.send(no_entendido)
+                        self.Broadcast(mensaje_tipo_desencriptado, mensaje_desencriptado)
+                    print("Cliente dijo: " + str(mensaje_desencriptado))
             except:
                 index_cliente = self.lista_clientes.index(cliente) # Cojemos el index de la lista clientes
                 self.lista_clientes.remove(cliente)
                 cliente.close()
                 break
 
-    def Broadcast(self, mensaje_desencriptado, cliente):
+    def Broadcast(self, mensaje, usuario):
         '''
         Esta funciona solo va a enviar un mensaje a cada cliente en nuestra lista
         '''
-        mensaje = str("Broadcast : " + mensaje_desencriptado)
-        mensaje_encriptado = json.dumps(mensaje)
-        mensaje_encriptado = mensaje_encriptado.encode()
-
-        print("enviando mensaje bc")
-        cliente.send(mensaje_encriptado) # Enviamos el mensaje a cada cliente
+        mensaje = usuario + " dijo : " + mensaje
+        mensaje_encriptado = 1
+        for i in range(len(self.lista_clientes)):
+            print("enviando mensaje bc")
+            self.lista_clientes[i].send(mensaje_encriptado) # Enviamos el mensaje a cada cliente
 
 
 
@@ -1121,7 +1080,7 @@ class Soldado(Jugador):
 
 
 class Cliente(Host):
-    def __init__(self, IP_Conectarse, Puerto, nombre_usuario, Es_Host=True):
+    def __init__(self, IP_Conectarse, Puerto, nombre_usuario, Es_Host=False):
 
         super().__init__(IP_Conectarse, Puerto, Es_Host)
         # Seccion sockets:
@@ -1129,54 +1088,94 @@ class Cliente(Host):
         #Eliminamos cosas que no necesitamos:
         del self.lista_clientes, self.lista_usuarios
 
-
-
         self.nombre_usuario = nombre_usuario
+        self.enviando = False
+        self.mensaje_tmp_para_enviar = [["LISTA_YACIMIENTOS", self.nombre_usuario], ["LISTA_ARBOLES", self.nombre_usuario]]
+
 
     def PrimeraConexion(self):
         '''
         Esto es una funcion que enviara los datos como nombre_usuario al establecer conexion por primera vez:
         '''
-        mensaje = self.socket.recv(1024)
-        mensaje_desencriptado = pickle.loads(mensaje)
-        print("Mensaje recibido: " + mensaje_desencriptado)
-        if mensaje_desencriptado == "NOMBRE":
-            tipo_mensaje = "USUARIO"
-            usuario = self.nombre_usuario
-            tipo_mensaje_encriptado = pickle.dumps(tipo_mensaje)
-            usuario_encriptado = pickle.dumps(usuario)
+        mensaje = self.socket.recv(2048)
+        mensaje = mensaje.decode()
+        mensaje_desencriptado = json.loads(mensaje)
+        print("Mensaje recibido: " + str(mensaje_desencriptado))
+        if mensaje_desencriptado[0] == "NOMBRE":
+            lista_mensaje = ["LISTA_BALAS", self.nombre_usuario]
+
+            lista_mensaje_encriptado = json.dumps(lista_mensaje)
+            lista_mensaje_encriptado = lista_mensaje_encriptado.encode()
+
 
             time.sleep(0.1)
             print("Enviando nombre")
-            self.socket.send(tipo_mensaje_encriptado)
+            self.socket.send(lista_mensaje_encriptado)
             time.sleep(0.1)
-            self.socket.send(usuario_encriptado)
+            #self.EnviarMensajeHost(self.mensaje, self.enviando)
+            self.enviando = False
+            self.recibiendo = True
+            hilo_nueva_recibir = threading.Thread(target=self.RecibirMensajeHost,) # Creo hilo nuevo
+            hilo_nueva_enviar = threading.Thread(target=self.EnviarMensajeHost, args=(self.mensaje_tmp_para_enviar, self.enviando,)) # Creo hilo nuevo
 
-            hilo_nueva_recibir = threading.Thread(target=self.RecibirMensajeHost) # Creo hilo nuevo
+            hilo_nueva_enviar.start() # Inicio hilo
             hilo_nueva_recibir.start() # Inicio hilo
 
                 
         else:
-            mensaje = "hola!"
-            print("hola!")
-            mensaje_encriptado = pickle.dumps(mensaje)
+            mensaje = "hola servidor no te he entendido!"
+            mensaje_encriptado = json.dumps(mensaje)
+            mensaje_encriptado = mensaje_encriptado.encode()
             self.socket.send(mensaje_encriptado)
 
     def RecibirMensajeHost(self):
             #Ahora recibir mensaje de host:
             while True:
                 try:
-                    mensaje = self.socket.recv(1024)
+                    mensaje = self.socket.recv(4096)
                     if len(mensaje) > 0 :
-                        mensaje_desencriptado = pickle.loads(mensaje)
-                        print("Host dijo: " + str(mensaje_desencriptado))
-                        break # fin
+                        mensaje = mensaje.decode()
+                        mensaje_desencriptado = json.loads(mensaje)
+                        print("Host dijo: " + str(mensaje_desencriptado[1][0]))
+
+                        #Pintar en pantalla listas:
+                        if mensaje_desencriptado[0][0] == "LISTA_ARBOLES":#Es la lista de arboles
+                            self.lista_arboles = mensaje_desencriptado[1][0]
+                        elif mensaje_desencriptado[0][0] == "LISTA_YACIMIENTOS":#Es la lista de yacimientos
+                            self.lista_yacimiento_petroleo = mensaje_desencriptado[1][0]
+                        elif mensaje_desencriptado[0][0] == "LISTA_BALAS":#Es la lista de balas
+                            self.lista_balas_iconos = mensaje_desencriptado[1][0]
+
+                        self.mensaje = ["LISTA_YACIMIENTOS", self.nombre_usuario]
+                        self.enviando = True
+                        self.recibiendo = False
+                         # fin
                 except ConnectionAbortedError as e:
                     print("Error: Connection aborted:", e)
                     # perform appropriate error handling such as closing the connection or reconnecting
 
-        
 
+    def EnviarMensajeHost(self, mensaje, enviando):
+        #Ahora enviar mensajes al host:
+        while True:
+                try:
+                    if self.enviando == True and len(self.mensaje_tmp_para_enviar) > 0:
+                        print("Enviando con funcion enviar!")
+                        mensaje_encriptado = json.dumps(mensaje[0]) # el primero de la lista
+                        mensaje_encriptado = mensaje_encriptado.encode()
+                        self.socket.send(mensaje_encriptado)
+                        self.enviando = False
+                        self.recibiendo = True
+                        del self.mensaje_tmp_para_enviar[0] # el primero
+                        if len(self.mensaje_tmp_para_enviar) == 0:
+                            break # hora de apagar :)
+                    
+                except ConnectionAbortedError as e:
+                    print("Error: Connection aborted:", e)
+                    # perform appropriate error handling such as closing the connection or reconnecting
+                    break
+
+    
 
 
     
@@ -1192,7 +1191,8 @@ class Cliente(Host):
             
 
 
-juego = Host("192.168.1.104", 9001, True)
+juego = Cliente("192.168.1.104", 9001, "Roberto", False)
+juego.PrimeraConexion()
 
 jugador = Jugador()
 jugador2 = Jugador()

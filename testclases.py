@@ -5,21 +5,28 @@ class MyClass:
     def my_function(self):
         print("The value of x is:", self.x)
 
+    def añadir1(self):
+        self.x = self.x + 1
+
+
 
 class MySubclass(MyClass):
-    def __init__(self, y):
+    def __init__(self, y, objeto_myclass):
         super().__init__()
         self.y = y
+        self.x = objeto_myclass.x
 
-    def my_subfunction(self):
-        print("The value of y is:", self.x)
+    def my_subfunctiony(self):
+        print("The value of y is:", self.y)
         self.x = 0
 
+    def my_subfunctionx(self):
+        print("The value of x is:", self.x)
 
-o1 = MySubclass(1)
+    def updatex(self, objeto_myclass):
+        self.x = objeto_myclass.x
 
-o1.my_function()
-o1.my_subfunction()
-o1.my_subfunction()
-print(o1.x)
+
+
+
 
