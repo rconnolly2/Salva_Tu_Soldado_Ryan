@@ -2,6 +2,7 @@ import pygame
 import math
 import sys
 from random import randint
+import random
 import socket
 import json
 import threading
@@ -127,6 +128,13 @@ class Host:
         for a in range(100):
             self.lista_balas_iconos.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "bala"])
 
+        #Otros jugadores:
+        self.pos_actual_otro_jugador = None
+        self.listapos_otrosjugadores = []
+        self.listapos_soldados_jugadores = []
+        self.tiempo_pasado = time.time()
+        self.tiempo_actual = 0
+
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
         self.arbol1 = pygame.image.load("arbol1.png")
@@ -214,13 +222,17 @@ class Host:
 
 
             hilo_recibir = threading.Thread(target=self.RecibirMensaje, args=(cliente,)) # Creo hilo nuevo
+
+            #Quito este recordatiorio temporalmente para saber que pasa
+            #hilo_recordatorio_host = threading.Thread(target=self.RecordatorioHost,) # Creo hilo nuevo
+            #hilo_recordatorio_host.start()
             hilo_recibir.start()
             
 
     def RecibirMensaje(self, cliente):
         while True:
             try:
-                mensaje_tipo = cliente.recv(2048)
+                mensaje_tipo = cliente.recv(4096)
                 if len(mensaje_tipo) > 0: # no esta vacio
                     print("mensaje no esta vacio: ")
                     mensaje_tipo = mensaje_tipo.decode()
@@ -257,6 +269,10 @@ class Host:
                         lista_balas_encriptado = lista_balas_encriptado.encode()
                         print("Enviando balas")
                         cliente.send(lista_balas_encriptado)
+                    elif mensaje_desencriptado[0] == "POS_JUGADOR":
+
+                        self.listapos_otrosjugadores.append(mensaje_desencriptado[1])
+                        print(self.listapos_otrosjugadores)
                     else:
                         #No le he entendido
                         no_entendido = "No te he entendido"
@@ -281,9 +297,80 @@ class Host:
         print("enviando mensaje bc")
         cliente.send(mensaje_encriptado) # Enviamos el mensaje a cada cliente
 
+    def RecordatorioHost(self):
+        '''
+        El host cada 2 segundos(mas o menos) va a recordar a sus usuarios que manden la nueva poscion de sus jugadores y soldados:
+        '''
+        mensaje = ["DAME_POS_JUGADOR", ""]
+        mensaje_encriptado = json.dumps(mensaje)
+        mensaje_encriptado = mensaje_encriptado.encode()
+        while True:
+            if (self.tiempo_actual - self.tiempo_pasado) >= 0.3: #an pasado 2 segundos
+                for cliente in self.lista_clientes:
+                    time.sleep(0.4)
+                    print("Enviando recordatorio host!")
+                    cliente.send(mensaje_encriptado)
+                #Nuevo tiempo pasado es tiempo actual
+                self.tiempo_pasado = time.time()
 
+
+
+    def ImprimirOtrosJugadores(self):
+        '''
+        Comprobar si los otros jugadores se han movido si es asi imprimir segun su direccion
+        '''
+
+        # Determina las coordenadas iniciales x e y de los puntos
+        if len(self.listapos_otrosjugadores) > 2:
+            x1, y1 = self.listapos_otrosjugadores[-2]
+            x1_nuevo, y1_nuevo = self.listapos_otrosjugadores[-1]
+
+            # Verifica la dirección del movimiento en las direcciones x e y
+            direccion_x = ""
+            direccion_y = ""
+
+            if x1_nuevo > x1:
+               direccion_x = "derecha"
+            elif x1_nuevo < x1:
+                direccion_x = "izquierda"
+
+            if y1_nuevo > y1:
+                direccion_y = "arriba"
+            elif y1_nuevo < y1:
+                direccion_y = "abajo"
+
+            resultado = jugador.ObjetoSigueObjeto((x1, y1), (x1_nuevo, y1_nuevo), 20, 120)
+            
+            '''if not resultado == None:
+                x1, y1 = resultado'''
+
+            self.listapos_otrosjugadores[0][0] = (x1)
+            self.listapos_otrosjugadores[0][1] = (y1)
 
             
+
+            # Calcular la diferencia entre las dos ubicaciones en términos de su proximidad al lago
+           
+            
+            dx = max(self.listapos_otrosjugadores[-1][0], self.listapos_otrosjugadores[-2][0]) - min(self.listapos_otrosjugadores[-1][0], self.listapos_otrosjugadores[-2][0])
+            dy = max(self.listapos_otrosjugadores[-1][1], self.listapos_otrosjugadores[-2][1]) - min(self.listapos_otrosjugadores[-1][1], self.listapos_otrosjugadores[-2][1])
+
+            # Verificar si dx es negativo y, si es así, invertir su signo
+            if self.listapos_otrosjugadores[-1][0] < self.listapos_otrosjugadores[-2][0]:
+                dx = -dx
+
+
+            # Verificar si dy es negativo y, si es así, invertir su signo
+            if self.listapos_otrosjugadores[-1][1] < self.listapos_otrosjugadores[-2][1]:
+                dy = -dy
+
+            x1 = x1 + (dx/4)
+            y1 = y1 + (dy/4)
+            print((dx, dy), (self.listapos_otrosjugadores[-1][0], self.listapos_otrosjugadores[-1][1]))
+            
+            self.screen.blit(jugador.fronteus, (x1, y1))
+
+
 
     def Distancia2Puntos(self, x1, y1, x2, y2):
         distancia = math.sqrt((x2-x1)**2+(y2-y1)**2)
@@ -491,6 +578,7 @@ class Host:
 
 
         keys = pygame.key.get_pressed()
+        self.socket.recv()
 
         if keys[pygame.K_1]:
             
@@ -813,12 +901,15 @@ class Host:
             #Los muevo en fila india:
             jugador.MoverSoldadosFilaIndia(jugador.lista_soldados, 100, 60)
 
+            #Imprimo otros jugadores:
+            #self.ImprimirOtrosJugadores()
+
 
             pygame.draw.circle(self.screen, (255, 240, 255), (50, 50), 10)
             pygame.draw.circle(self.screen, (255, 240, 255), (jugador.posjugador_x, jugador.posjugador_y), 10)
 
             #Barra inferior
-            self.ColocarYacimiento(self.lista_yacimiento_petroleo, jugador.lista_yacimiento_petroleo_jugador, "Roberto")
+            #self.ColocarYacimiento(self.lista_yacimiento_petroleo, jugador.lista_yacimiento_petroleo_jugador, "Roberto")
             #Tienda de campaña
             self.ColocarObjeto(jugador.lista_tienda_campaña, "Roberto", self.imagen_tienda_campana_colocando, self.imagen_tienda_campana, "tienda")
 
@@ -827,6 +918,9 @@ class Host:
 
             #Cargo Menu local:
             self.CargarMenu()
+
+            #Host necesita nueva pos?
+            self.tiempo_actual = time.time()
 
             pygame.draw.circle(self.screen, (255, 255, 0), (self.camera_x, self.camera_y), 30)
         
@@ -1192,7 +1286,7 @@ class Cliente(Host):
             
 
 
-juego = Host("192.168.1.104", 9001, True)
+juego = Host("192.168.1.106", 9001, True)
 
 jugador = Jugador()
 jugador2 = Jugador()

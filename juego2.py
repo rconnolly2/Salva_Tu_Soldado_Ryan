@@ -2,6 +2,7 @@ import pygame
 import math
 import sys
 from random import randint
+import random
 import socket
 import json
 import threading
@@ -12,19 +13,22 @@ import time
 class Host:
     def __init__(self, IP_HOST, Puerto, Es_Host=False):
         # Seccion sockets:
-        # Create a socket object
-        if Es_Host == True:
-
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Bind del socket
-
-        else: # si no es host se conecta a la ip
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect((IP_HOST, Puerto))
         
         self.lista_clientes = []
         self.lista_usuarios = []
-
+        # Create a socket object
+        if Es_Host == True:
+            print("funciona")
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Bind del socket
+            self.socket.bind((IP_HOST, Puerto))
+            self.socket.listen(3) #Limitado a 2 jugador + host = 3 
+            hilo_nueva_conexion = threading.Thread(target=self.NuevaConexion) # Creo hilo nuevo
+        
+            hilo_nueva_conexion.start() # Inicio hilo
+        else: # si no es host se conecta a la ip
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((IP_HOST, Puerto))
         
 
 
@@ -111,7 +115,7 @@ class Host:
 
         # Mis listas de decoracion ("esto lo tendra que cargar el server"):
         self.lista_arboles = []
-        for i in range(200):
+        for i in range(100):
             self.lista_arboles.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "arbol"])
 
         self.lista_yacimiento_petroleo = []
@@ -121,8 +125,14 @@ class Host:
             self.lista_yacimiento_petroleo.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "petroleo"])
 
         self.lista_balas_iconos = []
-        for a in range(200):
+        for a in range(100):
             self.lista_balas_iconos.append([randint(0, self.mapa_ancho), randint(0, self.mapa_alto), "bala"])
+
+        #Otros jugadores:
+        self.listapos_otrosjugadores = []
+        self.listapos_soldados_jugadores = []
+        self.tiempo_pasado = time.time()
+        self.tiempo_actual = 0
 
         # Cargo imagenes:
         self.tile_cesped = pygame.image.load("cesped200.png")
@@ -192,57 +202,148 @@ class Host:
         Esta funcion es para que el host reciba nuevos usuarios y lo envia a su lista de usuarios:
         '''
         while True:
-            
-            cliente, addr = self.socket.accept()
+            if len(self.lista_clientes) < 3: # Limite de 2 jugador +
+                cliente, addr = self.socket.accept()
             print("Nueva conexion con ip: " + str(addr))
+
+            #Añadimos cliente a nuestra lista de clientes :
             self.lista_clientes.append(cliente)
+            print('Number of connected clients:', len(self.lista_clientes))
             # Decirle a cliente que nos de su nombre_usuario
-            dame_tu_nombre = "NOMBRE"
+            dame_tu_nombre = ["NOMBRE", ""]
 
             # Convertir datos python a bytes
-            datos = 1
+            datos = json.dumps(dame_tu_nombre)
 
             # Enviar bytes sobre socket
-            cliente.send(datos)
+            cliente.send(datos.encode())
+
+
+
             hilo_recibir = threading.Thread(target=self.RecibirMensaje, args=(cliente,)) # Creo hilo nuevo
-            hilo_recibir.start() # Inicio hilo
+            #hilo_recordatorio_host = threading.Thread(target=self.RecordatorioHost,) # Creo hilo nuevo
+            #hilo_recordatorio_host.start()
+            hilo_recibir.start()
+            
 
     def RecibirMensaje(self, cliente):
         while True:
             try:
-                mensaje_tipo = cliente.recv(1024)
+                mensaje_tipo = cliente.recv(2048)
                 if len(mensaje_tipo) > 0: # no esta vacio
                     print("mensaje no esta vacio: ")
-                    mensaje_tipo_desencriptado = 1
-                    if mensaje_tipo_desencriptado == "USUARIO":
-                        #Me va a enviar su usuario:
-                        mensaje = cliente.recv(1024)
-                        mensaje_desencriptado = 1
-                        self.lista_usuarios.append(mensaje_desencriptado)
-                        print("Cliente dijo: " + str(mensaje_desencriptado))
-                        print("enviando broadcast")
-                        time.sleep(0.1)
-                        self.Broadcast(mensaje_tipo_desencriptado, mensaje_desencriptado)
+                    mensaje_tipo = mensaje_tipo.decode()
+                    mensaje_desencriptado = json.loads(mensaje_tipo)
+
                     print("Cliente dijo: " + str(mensaje_desencriptado))
+                    print(len(mensaje_desencriptado[0]) == len("1"))
+                    #Aqui tenemos los tipos de mensaje y luego los mensajes:
+
+                    if mensaje_desencriptado[0] == "USUARIO":
+                        self.lista_usuarios.append(mensaje_desencriptado[1]) #Añado su nombre a mi lista
+                        print("enviando broadcast")
+                        print(self.lista_clientes)
+                        time.sleep(0.3)
+                        self.Broadcast("Gracias por tu usuario! cliente", cliente)
+                    elif mensaje_desencriptado[0] == "LISTA_ARBOLES":
+                        #Me va a enviar su usuario:
+                        lista_arboles = [["LISTA_ARBOLES"], [self.lista_arboles]]
+                        lista_arboles_encriptado = json.dumps(lista_arboles)
+                        lista_arboles_encriptado = lista_arboles_encriptado.encode()
+                        print("Enviando arboles")
+                        cliente.send(lista_arboles_encriptado)
+                    elif mensaje_desencriptado[0] == "LISTA_YACIMIENTOS":
+                        #Me va a enviar su usuario:
+                        lista_yacimientos = [["LISTA_YACIMIENTOS"], [self.lista_yacimiento_petroleo]]
+                        lista_yacimientos_encriptado = json.dumps(lista_yacimientos)
+                        lista_yacimientos_encriptado = lista_yacimientos_encriptado.encode()
+                        print("Enviando yacimientos")
+                        cliente.send(lista_yacimientos_encriptado)
+                    elif mensaje_desencriptado[0] == "LISTA_BALAS":
+                        #Me va a enviar su usuario:
+                        lista_balas = [["LISTA_BALAS"], [self.lista_balas_iconos]]
+                        lista_balas_encriptado = json.dumps(lista_balas)
+                        lista_balas_encriptado = lista_balas_encriptado.encode()
+                        print("Enviando balas")
+                        cliente.send(lista_balas_encriptado)
+                    elif mensaje_desencriptado[0] == "POS_JUGADOR":
+
+                        self.listapos_otrosjugadores.append(mensaje_desencriptado[1])
+                        print(self.listapos_otrosjugadores)
+                    else:
+                        #No le he entendido
+                        no_entendido = "No te he entendido"
+                        no_entendido = json.dumps(no_entendido)
+                        no_entendido = no_entendido.encode()
+                        time.sleep(0.1)
+                        cliente.send(no_entendido)
             except:
                 index_cliente = self.lista_clientes.index(cliente) # Cojemos el index de la lista clientes
                 self.lista_clientes.remove(cliente)
                 cliente.close()
                 break
 
-    def Broadcast(self, mensaje, usuario):
+    def Broadcast(self, mensaje_desencriptado, cliente):
         '''
         Esta funciona solo va a enviar un mensaje a cada cliente en nuestra lista
         '''
-        mensaje = usuario + " dijo : " + mensaje
-        mensaje_encriptado = 1
-        for i in range(len(self.lista_clientes)):
-            print("enviando mensaje bc")
-            self.lista_clientes[i].send(mensaje_encriptado) # Enviamos el mensaje a cada cliente
+        mensaje = str("Broadcast : " + mensaje_desencriptado)
+        mensaje_encriptado = json.dumps(mensaje)
+        mensaje_encriptado = mensaje_encriptado.encode()
+
+        print("enviando mensaje bc")
+        cliente.send(mensaje_encriptado) # Enviamos el mensaje a cada cliente
+
+    def RecordatorioHost(self):
+        '''
+        El host cada 2 segundos(mas o menos) va a recordar a sus usuarios que manden la nueva poscion de sus jugadores y soldados:
+        '''
+        mensaje = ["DAME_POS_JUGADOR", ""]
+        mensaje_encriptado = json.dumps(mensaje)
+        mensaje_encriptado = mensaje_encriptado.encode()
+        while True:
+            if (self.tiempo_actual - self.tiempo_pasado) >= 5: #an pasado 2 segundos
+                for cliente in self.lista_clientes:
+                    time.sleep(0.4)
+                    print("Enviando recordatorio host!")
+                    cliente.send(mensaje_encriptado)
+                #Nuevo tiempo pasado es tiempo actual
+                self.tiempo_pasado = time.time()
 
 
 
-            
+    def ImprimirOtrosJugadores(self):
+        '''
+        Comprobar si los otros jugadores se han movido si es asi imprimir segun su direccion
+        '''
+        for i in range(2):
+            # Determina las coordenadas iniciales x e y de los puntos
+            if len(self.listapos_otrosjugadores) > 2:
+                x1, y1 = self.listapos_otrosjugadores[-2]
+                x1_nuevo, y1_nuevo = self.listapos_otrosjugadores[-1]
+
+                # Verifica la dirección del movimiento en las direcciones x e y
+                direccion_x = ""
+                direccion_y = ""
+
+                if x1_nuevo > x1:
+                    direccion_x = "derecha"
+                elif x1_nuevo < x1:
+                    direccion_x = "izquierda"
+
+                if y1_nuevo > y1:
+                    direccion_y = "arriba"
+                elif y1_nuevo < y1:
+                    direccion_y = "abajo"
+
+                x, y = self.move_to(x1, y1, x1_nuevo, y1_nuevo)
+
+                x1, y1 = x1+x/2, y1+y/2
+                x1_camara_escalado = (x1+self.camera_x)*self.cantidad_zoom
+                y1_camara_escalado = (y1+self.camera_y)*self.cantidad_zoom
+                self.screen.blit(jugador.fronteus, (x1_camara_escalado, y1_camara_escalado))
+
+
 
     def Distancia2Puntos(self, x1, y1, x2, y2):
         distancia = math.sqrt((x2-x1)**2+(y2-y1)**2)
@@ -772,6 +873,12 @@ class Host:
             #Los muevo en fila india:
             jugador.MoverSoldadosFilaIndia(jugador.lista_soldados, 100, 60)
 
+            #Imprimo otros jugadores:
+            #self.ImprimirOtrosJugadores()
+            if (self.tiempo_actual - self.tiempo_pasado) >= 1:
+                jugador.posjugador_x_anterior = jugador.posjugador_x
+                jugador.posjugador_y_anterior = jugador.posjugador_y
+
 
             pygame.draw.circle(self.screen, (255, 240, 255), (50, 50), 10)
             pygame.draw.circle(self.screen, (255, 240, 255), (jugador.posjugador_x, jugador.posjugador_y), 10)
@@ -786,6 +893,9 @@ class Host:
 
             #Cargo Menu local:
             self.CargarMenu()
+
+            #Host necesita nueva pos?
+            self.tiempo_actual = time.time()
 
             pygame.draw.circle(self.screen, (255, 255, 0), (self.camera_x, self.camera_y), 30)
         
@@ -844,6 +954,8 @@ class Jugador:
         # Posicion real sin camara añadida
         self.posjugador_y = 0
         self.posjugador_x = 0
+        self.posjugador_x_anterior = 0
+        self.posjugador_y_anterior = 0
         self.caja_camara_jugador = (200, 200) # Esto es la caja de colision del jugador
 
         #Ryan
@@ -1069,16 +1181,6 @@ class Jugador:
             
 
 
-class Soldado(Jugador):
-    def __init__(self, pos_spawn):
-        super().__init__() # permite heredar todas las propeidades .self
-        #Aqui elimino todas las propiedades que no voy a utilizar:
-        del self.posjugador_pantalla_x, self.posjugador_pantalla_y, self.lista_soldados
-        del self.numero_ryans, self.pos_miryan, self.usuario_jugador, self.lista_tienda_campaña, self.lista_yacimiento_petroleo_jugador
-        
-        self.posjugador_x, self.posjugador_y = pos_spawn
-
-
 class Cliente(Host):
     def __init__(self, IP_Conectarse, Puerto, nombre_usuario, Es_Host=False):
 
@@ -1090,7 +1192,8 @@ class Cliente(Host):
 
         self.nombre_usuario = nombre_usuario
         self.enviando = False
-        self.mensaje_tmp_para_enviar = [["LISTA_YACIMIENTOS", self.nombre_usuario], ["LISTA_ARBOLES", self.nombre_usuario]]
+        #Empiezo la conexion pidiendo de mi parte: yacimientos, arboles, balas y dando 3 veces mi posicion
+        self.mensaje_tmp_para_enviar = [["LISTA_YACIMIENTOS", self.nombre_usuario], ["LISTA_ARBOLES", self.nombre_usuario], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)]]
 
 
     def PrimeraConexion(self):
@@ -1116,7 +1219,7 @@ class Cliente(Host):
             self.enviando = False
             self.recibiendo = True
             hilo_nueva_recibir = threading.Thread(target=self.RecibirMensajeHost,) # Creo hilo nuevo
-            hilo_nueva_enviar = threading.Thread(target=self.EnviarMensajeHost, args=(self.mensaje_tmp_para_enviar, self.enviando,)) # Creo hilo nuevo
+            hilo_nueva_enviar = threading.Thread(target=self.EnviarMensajeHost, args=(self.mensaje_tmp_para_enviar,)) # Creo hilo nuevo
 
             hilo_nueva_enviar.start() # Inicio hilo
             hilo_nueva_recibir.start() # Inicio hilo
@@ -1136,8 +1239,8 @@ class Cliente(Host):
                     if len(mensaje) > 0 :
                         mensaje = mensaje.decode()
                         mensaje_desencriptado = json.loads(mensaje)
-                        print("Host dijo: " + str(mensaje_desencriptado[1][0]))
-
+                        print("Host dijo: " + str(mensaje_desencriptado[0]))
+                        #print("Host dijo: " + str(mensaje_desencriptado[0][1])) #datos de la array
                         #Pintar en pantalla listas:
                         if mensaje_desencriptado[0][0] == "LISTA_ARBOLES":#Es la lista de arboles
                             self.lista_arboles = mensaje_desencriptado[1][0]
@@ -1145,30 +1248,44 @@ class Cliente(Host):
                             self.lista_yacimiento_petroleo = mensaje_desencriptado[1][0]
                         elif mensaje_desencriptado[0][0] == "LISTA_BALAS":#Es la lista de balas
                             self.lista_balas_iconos = mensaje_desencriptado[1][0]
+                        elif mensaje_desencriptado[0] == "DAME_POS_JUGADOR":#Es la lista de posjugador
+                            #Toca darle pos jugador:
+                            print("Enviando pos jugador:")
+                            self.mensaje_tmp_para_enviar.append(["POS_JUGADOR", [jugador.posjugador_x, jugador.posjugador_y]])
+                            self.enviando = True
+                        else:
+                            print("No entiendo el mensaje del server")
+                        if len(self.mensaje_tmp_para_enviar) > 0:
+                            print(self.mensaje_tmp_para_enviar[0][0])
+                            print(self.mensaje_tmp_para_enviar)
 
-                        self.mensaje = ["LISTA_YACIMIENTOS", self.nombre_usuario]
                         self.enviando = True
-                        self.recibiendo = False
+
                          # fin
                 except ConnectionAbortedError as e:
                     print("Error: Connection aborted:", e)
                     # perform appropriate error handling such as closing the connection or reconnecting
 
 
-    def EnviarMensajeHost(self, mensaje, enviando):
+    def EnviarMensajeHost(self, mensaje):
         #Ahora enviar mensajes al host:
         while True:
                 try:
-                    if self.enviando == True and len(self.mensaje_tmp_para_enviar) > 0:
-                        print("Enviando con funcion enviar!")
+                    if len(self.mensaje_tmp_para_enviar) > 0:
+                        
                         mensaje_encriptado = json.dumps(mensaje[0]) # el primero de la lista
                         mensaje_encriptado = mensaje_encriptado.encode()
+                        print("Enviando con funcion enviar! esto: " + str(mensaje[0]))
                         self.socket.send(mensaje_encriptado)
-                        self.enviando = False
-                        self.recibiendo = True
+
+                        time.sleep(1)
+                        self.enviando = True
                         del self.mensaje_tmp_para_enviar[0] # el primero
-                        if len(self.mensaje_tmp_para_enviar) == 0:
-                            break # hora de apagar :)
+                        #if len(self.mensaje_tmp_para_enviar) == 0:
+                            #break # hora de apagar :)
+                    else:
+                        #No hay mensaje que enviar
+                        time.sleep(0.2)
                     
                 except ConnectionAbortedError as e:
                     print("Error: Connection aborted:", e)
@@ -1188,19 +1305,16 @@ class Cliente(Host):
 
 
                 
-            
-
-
-juego = Cliente("192.168.1.104", 9001, "Roberto", False)
-juego.PrimeraConexion()
-
 jugador = Jugador()
 jugador2 = Jugador()
+
+
+juego = Cliente("192.168.1.106", 9001, "Roberto", False)
+juego.PrimeraConexion()
+
+
 
 
 juego.zoom_teclado()
 
 juego.run()
-
-
-
