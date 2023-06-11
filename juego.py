@@ -270,9 +270,21 @@ class Host:
                         print("Enviando balas")
                         cliente.send(lista_balas_encriptado)
                     elif mensaje_desencriptado[0] == "POS_JUGADOR":
+                        jugador_en_lista = False
+                        #Nos a enviado una posicion del jugador:
+                        for i in range(len(self.listapos_otrosjugadores)):
+                            #Miramos si este jugador existe en la lista si existe actualizamos la nueva posicion
+                            if self.listapos_otrosjugadores[i][0] == mensaje_desencriptado[1]:
+                                jugador_en_lista = True
+                                #Cambio el valor
+                                self.listapos_otrosjugadores[i][1] = mensaje_desencriptado[2]
+                                break
 
-                        self.listapos_otrosjugadores.append(mensaje_desencriptado[1])
-                        print(self.listapos_otrosjugadores)
+                        #No existe este jugador lo creamos
+                        if jugador_en_lista == False:      
+                            self.listapos_otrosjugadores.append(mensaje_desencriptado[1:])
+                            print(self.listapos_otrosjugadores)
+
                     else:
                         #No le he entendido
                         no_entendido = "No te he entendido"
@@ -902,7 +914,7 @@ class Host:
             jugador.MoverSoldadosFilaIndia(jugador.lista_soldados, 100, 60)
 
             #Imprimo otros jugadores:
-            #self.ImprimirOtrosJugadores()
+            self.ImprimirOtrosJugadores()
 
 
             pygame.draw.circle(self.screen, (255, 240, 255), (50, 50), 10)
