@@ -1193,7 +1193,7 @@ class Cliente(Host):
         self.nombre_usuario = nombre_usuario
         self.enviando = False
         #Empiezo la conexion pidiendo de mi parte: yacimientos, arboles, balas y dando 3 veces mi posicion
-        self.mensaje_tmp_para_enviar = [["LISTA_YACIMIENTOS", self.nombre_usuario], ["LISTA_ARBOLES", self.nombre_usuario], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", (jugador.posjugador_x, jugador.posjugador_y)]]
+        self.mensaje_tmp_para_enviar = [["LISTA_YACIMIENTOS", self.nombre_usuario], ["LISTA_ARBOLES", self.nombre_usuario], ["POS_JUGADOR", self.nombre_usuario, (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", self.nombre_usuario,  (jugador.posjugador_x, jugador.posjugador_y)], ["POS_JUGADOR", self.nombre_usuario, (jugador.posjugador_x, jugador.posjugador_y)]]
 
 
     def PrimeraConexion(self):
